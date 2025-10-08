@@ -82,6 +82,22 @@ class RefundsController {
             }
         })
     }
+
+    async show(request: Request, response: Response) {
+        const paramsSchema = z.object({
+            id: z.string().uuid(),
+        })
+
+        const {id} = paramsSchema.parse(request.params)
+
+        const refund = await prisma.refunds.findFirst({
+            where: {id},
+            include: {user: true},
+        })
+
+        response.json(refund)
+
+    }
 }
 
 export {RefundsController}
