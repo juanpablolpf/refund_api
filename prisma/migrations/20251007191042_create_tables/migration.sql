@@ -15,7 +15,7 @@ CREATE TABLE "refunds" (
     "name" TEXT NOT NULL,
     "amount" REAL NOT NULL,
     "category" TEXT NOT NULL,
-    "Filename" TEXT NOT NULL,
+    "filename" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME,
