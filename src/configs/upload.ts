@@ -4,7 +4,7 @@ import crypto from "node:crypto"
 
 //  ../../tmp deixa dinamico 
 const TMP_FOLDER = path.resolve(__dirname, "..", "..", "tmp")
-const UPLOADS_FOLDER = path.relative(TMP_FOLDER, "uploads")
+const UPLOADS_FOLDER = path.resolve(TMP_FOLDER, "uploads")
 
 //1KB = 1024 bytes
 //1MB = 1024 * 1024 * 3
