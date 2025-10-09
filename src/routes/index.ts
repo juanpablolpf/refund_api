@@ -3,6 +3,7 @@ import { usersRoutes } from "./users-routes";
 import { sessionsRoutes } from "./sessions-routes";
 import { refundsRoutes } from "./refunds-routes";
 import { ensureAuthtenticated } from "@/middlewares/ensure-authtenticated";
+import { uploadsRoutes } from "./uploads-routes";
 
 const routes = Router()
 
@@ -13,5 +14,6 @@ routes.use("/sessions", sessionsRoutes)
 //Rotas privadas
 routes.use(ensureAuthtenticated)
 routes.use("/refunds", refundsRoutes)
+routes.use("/uploads", uploadsRoutes)
 
 export {routes}
