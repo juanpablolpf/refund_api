@@ -136,6 +136,7 @@ Variáveis de ambiente no Render:
 
 ```
 NODE_ENV=production
+NODE_VERSION=22
 JWT_SECRET=<um segredo novo, diferente do local>
 DATABASE_URL=<Session pooler do Supabase>
 STORAGE_DRIVER=s3
