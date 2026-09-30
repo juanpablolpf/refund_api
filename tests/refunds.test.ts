@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import fs from "node:fs"
-import path from "node:path"
-import uploadConfig from "@/configs/upload"
+import { storage } from "@/providers/storage"
 import { api, createRefund, createUser, resetDatabase, uploadReceipt } from "./helpers"
 
 const MISSING_ID = "00000000-0000-4000-8000-000000000000"
@@ -72,6 +70,18 @@ describe("GET /refunds e /refunds/me", () => {
         expect(all.body.pagination.totalRecords).toBe(2)
         expect(approved.body.pagination.totalRecords).toBe(1)
         expect(JSON.stringify(all.body)).not.toContain("password")
+    })
+
+    it("filtro por nome ignora maiúsculas e minúsculas", async () => {
+        const employee = await createUser()
+        const manager = await createUser("manager")
+        await createRefund(employee.token)
+
+        const response = await api()
+            .get(`/refunds?name=${employee.user.name.toUpperCase()}`)
+            .set("Authorization", `Bearer ${manager.token}`)
+
+        expect(response.body.pagination.totalRecords).toBe(1)
     })
 })
 
@@ -169,7 +179,7 @@ describe("DELETE /refunds/:id", () => {
         const response = await api().delete(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`)
 
         expect(response.status).toBe(204)
-        expect(fs.existsSync(path.resolve(uploadConfig.UPLOADS_FOLDER, refund.filename))).toBe(false)
+        expect(await storage.exists(refund.filename)).toBe(false)
     })
 
     it("não cancela pedido já analisado", async () => {

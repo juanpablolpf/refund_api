@@ -12,7 +12,9 @@ export default defineConfig({
         env: {
             NODE_ENV: "test",
             JWT_SECRET: "segredo-so-para-testes-com-32-caracteres-ou-mais",
-            DATABASE_URL: "file:./test.db",
+            DATABASE_URL: "postgresql://docker:docker@localhost:5432/refund?schema=test",
+            // Padrão "disk"; para testar o S3, rode com STORAGE_DRIVER=s3 e as variáveis S3_*
+            STORAGE_DRIVER: process.env.STORAGE_DRIVER ?? "disk",
         },
     },
 })

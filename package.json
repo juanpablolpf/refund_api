@@ -2,6 +2,9 @@
   "name": "refund_api",
   "version": "1.0.0",
   "main": "build/server.js",
+  "engines": {
+    "node": ">=20.16"
+  },
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsup src/server.ts src/scripts/create-manager.ts --out-dir build --clean",
@@ -9,12 +12,17 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "create-manager": "tsx --env-file=.env src/scripts/create-manager.ts"
+    "db:up": "docker compose up -d",
+    "db:migrate": "prisma migrate deploy",
+    "create-manager": "tsx --env-file=.env src/scripts/create-manager.ts",
+    "create-manager:prod": "tsx --env-file=.env.production src/scripts/create-manager.ts",
+    "postinstall": "prisma generate"
   },
   "author": "Juan Pablo",
   "license": "ISC",
   "description": "API de solicitação de reembolso",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1144.0",
     "@prisma/client": "^6.2.1",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",

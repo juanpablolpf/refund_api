@@ -1,12 +1,9 @@
 import { Request, Response } from "express";
 import {z} from "zod"
-import fs from "node:fs"
-import path from "node:path"
 import { Prisma } from "@prisma/client";
 import {prisma} from "@/database/prisma"
 import { AppError } from "@/utils/AppError";
-import uploadConfig from "@/configs/upload"
-import { DiskStorage } from "@/providers/disk-storage";
+import { storage } from "@/providers/storage";
 
 const CategoriesEnum = z.enum(["food", "others", "services", "transport", "accommodation"])
 const StatusEnum = z.enum(["pending", "approved", "rejected"])
@@ -94,9 +91,7 @@ class RefundsController {
         }
 
         // O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
-        try {
-            await fs.promises.access(path.resolve(uploadConfig.UPLOADS_FOLDER, filename))
-        } catch {
+        if (!(await storage.exists(filename))) {
             throw new AppError("Comprovante não encontrado. Envie o arquivo antes de criar a solicitação")
         }
 
@@ -128,7 +123,7 @@ class RefundsController {
         const {name, status, page, perPage} = querySchema.parse(request.query)
 
         const result = await paginate(
-            {user: {name: {contains: name}}, status},
+            {user: {name: {contains: name, mode: "insensitive"}}, status},
             page,
             perPage
         )
@@ -208,7 +203,7 @@ class RefundsController {
         }
 
         await prisma.refunds.delete({where: {id}})
-        await new DiskStorage().deleteFile(refund.filename, "upload")
+        await storage.delete(refund.filename)
 
         response.status(204).send()
     }
