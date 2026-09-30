@@ -21,7 +21,7 @@ npm install
 cp .env.example .env          # depois preencha o JWT_SECRET (veja abaixo)
 npm run db:up                 # sobe o Postgres no Docker
 npm run db:migrate            # cria as tabelas
-npm run create-manager -- "Seu Nome" voce@empresa.com suasenha
+npm run create-manager -- "Seu Nome" voce@empresa.com   # a senha é pedida em seguida
 npm run dev                   # http://localhost:3333
 ```
 
@@ -48,13 +48,13 @@ npm run dev                   # http://localhost:3333
 | `npm start` | Roda a versão de produção (as variáveis precisam estar no ambiente) |
 | `npm run db:up` | Sobe o Postgres de desenvolvimento no Docker |
 | `npm run db:migrate` | Aplica as migrações no banco do `DATABASE_URL` |
-| `npm run create-manager -- "Nome" email senha` | Cria um gestor ou promove uma conta existente |
-| `npm run create-manager:prod -- "Nome" email senha` | O mesmo, no banco de produção (lê o `.env.production`) |
+| `npm run create-manager -- "Nome" email` | Cria um gestor ou promove uma conta existente |
+| `npm run create-manager:prod -- "Nome" email` | O mesmo, no banco de produção (lê o `.env.production`) |
 
 ## Usuários e permissões
 
 - Todo cadastro público vira **funcionário** (`employee`)
-- **Gestores** (`manager`) só são criados pelo `npm run create-manager`, direto no servidor
+- **Gestores** (`manager`) só são criados pelo `npm run create-manager`, rodado por quem tem acesso ao banco
 - As rotas privadas exigem o cabeçalho `Authorization: Bearer <token>`
 
 ## Rotas
@@ -153,7 +153,7 @@ CORS_ORIGIN=<endereço do front, quando existir>
 O plano grátis do Render não dá acesso ao terminal do servidor. Por isso o gestor é criado a partir do seu computador: crie um arquivo `.env.production` com `JWT_SECRET` e o `DATABASE_URL` do Supabase (ele não vai para o git) e rode:
 
 ```bash
-npm run create-manager:prod -- "Seu Nome" voce@empresa.com suasenha
+npm run create-manager:prod -- "Seu Nome" voce@empresa.com
 ```
 
 ### Limites do plano grátis

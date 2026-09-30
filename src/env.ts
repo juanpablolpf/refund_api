@@ -1,20 +1,24 @@
 import { z } from "zod"
 
+// Linha vazia no .env (ex.: "CORS_ORIGIN=") conta como não configurada
+const optional = <T extends z.ZodTypeAny>(schema: T) =>
+    z.preprocess((value) => (value === "" ? undefined : value), schema.optional())
+
 const envSchema = z.object({
     JWT_SECRET: z.string().min(32, "JWT_SECRET precisa ter pelo menos 32 caracteres"),
     PORT: z.coerce.number().default(3333),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
     // Endereço do front que pode chamar a API (vazio = qualquer origem)
-    CORS_ORIGIN: z.string().url().optional(),
+    CORS_ORIGIN: optional(z.string().url()),
 
     // Onde os comprovantes ficam: "disk" (pasta tmp/uploads) ou "s3" (Supabase, R2, AWS...)
     STORAGE_DRIVER: z.enum(["disk", "s3"]).default("disk"),
-    S3_ENDPOINT: z.string().url().optional(),
-    S3_REGION: z.string().optional(),
-    S3_BUCKET: z.string().optional(),
-    S3_ACCESS_KEY_ID: z.string().optional(),
-    S3_SECRET_ACCESS_KEY: z.string().optional(),
+    S3_ENDPOINT: optional(z.string().url()),
+    S3_REGION: optional(z.string()),
+    S3_BUCKET: optional(z.string()),
+    S3_ACCESS_KEY_ID: optional(z.string()),
+    S3_SECRET_ACCESS_KEY: optional(z.string()),
 }).superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER !== "s3") return
 
