@@ -8,7 +8,7 @@ interface TokenPayload {
     sub: string
 }
 
-function ensureAuthtenticated(request: Request, response: Response, next: NextFunction){
+function ensureAuthenticated(request: Request, response: Response, next: NextFunction){
     try {
         const authHeader = request.headers.authorization
 
@@ -38,4 +38,4 @@ function ensureAuthtenticated(request: Request, response: Response, next: NextFu
     }
 }
 
-export {ensureAuthtenticated}
+export {ensureAuthenticated}

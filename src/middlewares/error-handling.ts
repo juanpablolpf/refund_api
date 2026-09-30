@@ -32,6 +32,12 @@ export const errorHandling: ErrorRequestHandler = (
         return
     }
 
+    // JSON malformado no corpo da requisição (erro do express.json)
+    if (error.type === "entity.parse.failed") {
+        response.status(400).json({message: "JSON inválido no corpo da requisição"})
+        return
+    }
+
     // Detalhes do erro ficam só no log do servidor
     console.error(error)
     response.status(500).json({message: "Erro interno do servidor"})

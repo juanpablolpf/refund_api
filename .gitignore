@@ -9,3 +9,6 @@ prisma/*.db-journal
 
 # arquivos enviados
 tmp
+
+# build de produção
+build

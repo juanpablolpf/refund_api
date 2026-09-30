@@ -2,12 +2,10 @@ import multer from "multer";
 import path from "node:path"
 import crypto from "node:crypto"
 
-//  ../../tmp deixa dinamico 
-const TMP_FOLDER = path.resolve(__dirname, "..", "..", "tmp")
+// Relativo à raiz do projeto (onde o npm roda), igual em dev (src/) e no build (build/)
+const TMP_FOLDER = path.resolve(process.cwd(), "tmp")
 const UPLOADS_FOLDER = path.resolve(TMP_FOLDER, "uploads")
 
-//1KB = 1024 bytes
-//1MB = 1024 * 1024 * 3
 const MAX_SIZE = 3
 const MAX_FILE_SIZE = 1024 * 1024 * 3 // 3mb
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"]
