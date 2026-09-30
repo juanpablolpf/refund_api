@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "src/server.ts",
   "scripts": {
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "create-manager": "tsx --env-file=.env src/scripts/create-manager.ts"
   },
   "author": "Juan Pablo",
   "license": "ISC",

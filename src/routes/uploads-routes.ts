@@ -9,7 +9,17 @@ const uploadsController = new UploadsController()
 
 const upload = multer(uploadConfig.MULTER)
 
-uploadsRoutes.use(verifyUserAuthorization(["employee"]))
-uploadsRoutes.post("/", upload.single("file"), uploadsController.create)
+uploadsRoutes.post(
+    "/",
+    verifyUserAuthorization(["employee"]),
+    upload.single("file"),
+    uploadsController.create
+)
+
+uploadsRoutes.get(
+    "/:filename",
+    verifyUserAuthorization(["employee", "manager"]),
+    uploadsController.show
+)
 
 export{uploadsRoutes}

@@ -1,5 +1,7 @@
 import { Request, Response } from "express"
 import z from "zod"
+import path from "node:path"
+import {prisma} from "@/database/prisma"
 
 import uploadConfig from "@/configs/upload"
 import { DiskStorage } from "@/providers/disk-storage"
@@ -24,7 +26,7 @@ class UploadsController {
                     .positive()
                     .refine(
                         (size) => size <= uploadConfig.MAX_FILE_SIZE,
-                        `Arquivo excede o tamanho máximo de ${uploadConfig.MAX_SIZE}` 
+                        `Arquivo excede o tamanho máximo de ${uploadConfig.MAX_SIZE}MB`
                     ),
             })
             .passthrough()
@@ -44,6 +46,35 @@ class UploadsController {
             }
             throw error
         }
+    }
+
+    async show(request: Request, response: Response) {
+        const paramsSchema = z.object({
+            filename: z.string().regex(/^[a-f0-9]{20}-[a-zA-Z0-9._-]+$/),
+        })
+
+        const result = paramsSchema.safeParse(request.params)
+
+        if (!result.success) {
+            throw new AppError("Arquivo não encontrado", 404)
+        }
+
+        const {filename} = result.data
+
+        const refund = await prisma.refunds.findFirst({where: {filename}})
+
+        const isOwner = refund?.userId === request.user?.id
+        const isManager = request.user?.role === "manager"
+
+        if (!refund || (!isOwner && !isManager)) {
+            throw new AppError("Arquivo não encontrado", 404)
+        }
+
+        response.sendFile(path.resolve(uploadConfig.UPLOADS_FOLDER, filename), (error) => {
+            if (error && !response.headersSent) {
+                response.status(404).json({message: "Arquivo não encontrado"})
+            }
+        })
     }
 }
 

@@ -5,6 +5,11 @@ import { AppError } from "@/utils/AppError";
 
 const CategoriesEnum = z.enum(["food", "others", "services", "transport", "accommodation"])
 
+// Dados do usuário que podem sair na resposta (nunca a senha)
+const userPublicFields = {
+    select: {id: true, name: true, email: true, role: true},
+}
+
 class RefundsController {
     async create (request: Request, response: Response) {
         const bodySchema = z.object({
@@ -36,8 +41,8 @@ class RefundsController {
     async index(request: Request, response: Response) {
         const querySchema = z.object({
             name: z.string().optional().default(""),
-            page: z.coerce.number().optional().default(1),
-            perPage: z.coerce.number().optional().default(10),
+            page: z.coerce.number().int().min(1).optional().default(1),
+            perPage: z.coerce.number().int().min(1).max(50).optional().default(10),
         })
 
         const {name, page, perPage} = querySchema.parse(request.query)
@@ -56,7 +61,7 @@ class RefundsController {
                 },
             },
             orderBy: {createdAt: "desc"},
-            include: {user: true},
+            include: {user: userPublicFields},
         })
 
         // Obter o total de registrs para calcular o numero de paginas.
@@ -90,10 +95,19 @@ class RefundsController {
 
         const {id} = paramsSchema.parse(request.params)
 
-        const refund = await prisma.refunds.findFirst({
+        const refund = await prisma.refunds.findUnique({
             where: {id},
-            include: {user: true},
+            include: {user: userPublicFields},
         })
+
+        // Funcionário só enxerga os próprios pedidos. Responde 404 (e não 403)
+        // para não revelar que o id existe.
+        const isOwner = refund?.userId === request.user?.id
+        const isManager = request.user?.role === "manager"
+
+        if (!refund || (!isOwner && !isManager)) {
+            throw new AppError("Solicitação não encontrada", 404)
+        }
 
         response.json(refund)
 
