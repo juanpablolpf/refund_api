@@ -1,15 +1,29 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { sign } from "jsonwebtoken"
 import { prisma } from "@/database/prisma"
-import { api, createUser, resetDatabase } from "./helpers"
+import { api, createInvite, createUser, resetDatabase } from "./helpers"
 
 beforeEach(resetDatabase)
 
+async function signUpWithInvite(body: Record<string, unknown>) {
+    const manager = await createUser("manager")
+    const invite = await createInvite(manager.token)
+
+    return api().post("/users").send({inviteToken: invite.token, ...body})
+}
+
 describe("POST /users", () => {
-    it("cadastra sempre como funcionário, mesmo pedindo manager", async () => {
+    it("exige link de convite", async () => {
         const response = await api()
             .post("/users")
-            .send({name: "Hacker", email: "hacker@teste.com", password: "123456", role: "manager"})
+            .send({name: "Sem Convite", email: "solto@teste.com", password: "123456"})
+
+        expect(response.status).toBe(400)
+        expect(await prisma.user.findUnique({where: {email: "solto@teste.com"}})).toBeNull()
+    })
+
+    it("o papel vem do convite, mesmo pedindo manager no corpo", async () => {
+        const response = await signUpWithInvite({name: "Hacker", email: "hacker@teste.com", password: "123456", role: "manager"})
 
         expect(response.status).toBe(201)
 
@@ -18,7 +32,9 @@ describe("POST /users", () => {
     })
 
     it("recusa e-mail repetido", async () => {
-        const body = {name: "Maria", email: "maria@teste.com", password: "123456"}
+        const manager = await createUser("manager")
+        const invite = await createInvite(manager.token)
+        const body = {name: "Maria", email: "maria@teste.com", password: "123456", inviteToken: invite.token}
         await api().post("/users").send(body)
 
         const response = await api().post("/users").send(body)
@@ -37,18 +53,19 @@ describe("POST /users", () => {
 })
 
 describe("POST /sessions", () => {
-    it("devolve token e não devolve a senha", async () => {
-        await api().post("/users").send({name: "Maria", email: "maria@teste.com", password: "123456"})
+    it("devolve token, a empresa e não devolve a senha", async () => {
+        await signUpWithInvite({name: "Maria", email: "maria@teste.com", password: "123456"})
 
-        const response = await api().post("/sessions").send({email: "maria@teste.com", password: "123456"})
+        const response = await api().post("/sessions").send({email: "Maria@Teste.com", password: "123456"})
 
         expect(response.status).toBe(200)
         expect(response.body.token).toEqual(expect.any(String))
         expect(response.body.user).not.toHaveProperty("password")
+        expect(response.body.user.organization.name).toBe("Empresa Teste")
     })
 
     it("recusa senha errada", async () => {
-        await api().post("/users").send({name: "Maria", email: "maria@teste.com", password: "123456"})
+        await signUpWithInvite({name: "Maria", email: "maria@teste.com", password: "123456"})
 
         const response = await api().post("/sessions").send({email: "maria@teste.com", password: "errada"})
 
@@ -64,9 +81,18 @@ describe("autenticação", () => {
     })
 
     it("recusa token assinado com outro segredo", async () => {
-        const fakeToken = sign({role: "manager"}, "juan", {subject: "qualquer-id"})
+        const fakeToken = sign({role: "manager", org: "qualquer"}, "juan", {subject: "qualquer-id"})
 
         const response = await api().get("/refunds").set("Authorization", `Bearer ${fakeToken}`)
+
+        expect(response.status).toBe(401)
+    })
+
+    it("recusa token antigo, sem empresa", async () => {
+        const {user} = await createUser("manager")
+        const oldToken = sign({role: "manager"}, process.env.JWT_SECRET!, {subject: user.id})
+
+        const response = await api().get("/refunds").set("Authorization", `Bearer ${oldToken}`)
 
         expect(response.status).toBe(401)
     })

@@ -5,6 +5,7 @@ import { Request, Response, NextFunction } from "express";
 
 interface TokenPayload {
     role: string
+    org?: string
     sub: string
 }
 
@@ -22,13 +23,19 @@ function ensureAuthenticated(request: Request, response: Response, next: NextFun
             throw new AppError("Invalid JWT token", 401)
         }
 
-        const {role, sub: user_id} = verify(token, authConfig.jwt.secret, {
+        const {role, org, sub: user_id} = verify(token, authConfig.jwt.secret, {
             algorithms: ["HS256"],
         }) as TokenPayload
+
+        // Tokens emitidos antes das empresas não têm "org": a pessoa precisa entrar de novo
+        if (!org) {
+            throw new AppError("Invalid JWT token", 401)
+        }
 
         request.user = {
             id: user_id,
             role,
+            organizationId: org,
         }
 
         return next()

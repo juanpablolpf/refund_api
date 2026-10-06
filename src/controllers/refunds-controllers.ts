@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import {prisma} from "@/database/prisma"
 import { AppError } from "@/utils/AppError";
 import { storage } from "@/providers/storage";
+import { authUser } from "@/utils/auth-user";
 
 const CategoriesEnum = z.enum(["food", "others", "services", "transport", "accommodation"])
 const StatusEnum = z.enum(["pending", "approved", "rejected"])
@@ -50,14 +51,18 @@ async function paginate(where: Prisma.RefundsWhereInput, page: number, perPage: 
 
 // Aprova ou recusa só se o pedido ainda estiver pendente. O filtro por status
 // no próprio update evita que dois gestores analisem o mesmo pedido ao mesmo tempo.
-async function review(id: string, reviewerId: string, data: Prisma.RefundsUpdateManyMutationInput) {
+async function review(
+    id: string,
+    reviewer: {id: string; organizationId: string},
+    data: Prisma.RefundsUpdateManyMutationInput,
+) {
     const {count} = await prisma.refunds.updateMany({
-        where: {id, status: "pending"},
-        data: {...data, reviewedById: reviewerId, reviewedAt: new Date()},
+        where: {id, organizationId: reviewer.organizationId, status: "pending"},
+        data: {...data, reviewedById: reviewer.id, reviewedAt: new Date()},
     })
 
     if (count === 0) {
-        const exists = await prisma.refunds.findUnique({where: {id}, select: {id: true}})
+        const exists = await prisma.refunds.findFirst({where: {id, organizationId: reviewer.organizationId}, select: {id: true}})
 
         if (!exists) {
             throw new AppError("Solicitação não encontrada", 404)
@@ -86,9 +91,7 @@ class RefundsController {
 
         const {name, category, amountInCents, filename} = bodySchema.parse(request.body)
 
-        if (!request.user?.id) {
-            throw new AppError("Unauthorized", 401)
-        }
+        const user = authUser(request)
 
         // O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
         if (!(await storage.exists(filename))) {
@@ -107,7 +110,8 @@ class RefundsController {
                 category,
                 amountInCents,
                 filename,
-                userId: request.user.id,
+                userId: user.id,
+                organizationId: user.organizationId,
             },
         })
 
@@ -123,7 +127,7 @@ class RefundsController {
         const {name, status, page, perPage} = querySchema.parse(request.query)
 
         const result = await paginate(
-            {user: {name: {contains: name, mode: "insensitive"}}, status},
+            {organizationId: authUser(request).organizationId, user: {name: {contains: name, mode: "insensitive"}}, status},
             page,
             perPage
         )
@@ -135,23 +139,25 @@ class RefundsController {
     async mine(request: Request, response: Response) {
         const {status, page, perPage} = paginationSchema.parse(request.query)
 
-        const result = await paginate({userId: request.user?.id, status}, page, perPage)
+        const result = await paginate({userId: authUser(request).id, status}, page, perPage)
 
         response.json(result)
     }
 
     async show(request: Request, response: Response) {
         const {id} = paramsSchema.parse(request.params)
+        const user = authUser(request)
 
-        const refund = await prisma.refunds.findUnique({
-            where: {id},
+        // Pedido de outra empresa não existe para quem pergunta
+        const refund = await prisma.refunds.findFirst({
+            where: {id, organizationId: user.organizationId},
             include: {user: userPublicFields, reviewedBy: userPublicFields},
         })
 
         // Funcionário só enxerga os próprios pedidos. Responde 404 (e não 403)
         // para não revelar que o id existe.
-        const isOwner = refund?.userId === request.user?.id
-        const isManager = request.user?.role === "manager"
+        const isOwner = refund?.userId === user.id
+        const isManager = user.role === "manager"
 
         if (!refund || (!isOwner && !isManager)) {
             throw new AppError("Solicitação não encontrada", 404)
@@ -163,7 +169,7 @@ class RefundsController {
     async approve(request: Request, response: Response) {
         const {id} = paramsSchema.parse(request.params)
 
-        const refund = await review(id, request.user!.id, {
+        const refund = await review(id, authUser(request), {
             status: "approved",
             rejectionReason: null,
         })
@@ -180,7 +186,7 @@ class RefundsController {
 
         const {reason} = bodySchema.parse(request.body)
 
-        const refund = await review(id, request.user!.id, {
+        const refund = await review(id, authUser(request), {
             status: "rejected",
             rejectionReason: reason,
         })
@@ -194,7 +200,7 @@ class RefundsController {
 
         const refund = await prisma.refunds.findUnique({where: {id}})
 
-        if (!refund || refund.userId !== request.user?.id) {
+        if (!refund || refund.userId !== authUser(request).id) {
             throw new AppError("Solicitação não encontrada", 404)
         }
 

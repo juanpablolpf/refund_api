@@ -26,6 +26,21 @@ enum Category {
   accommodation
 }
 
+// Cada empresa cliente tem seus próprios usuários, pedidos e convites
+model Organization {
+  id   String @id @default(uuid())
+  name String
+
+  users   User[]
+  refunds Refunds[]
+  invites Invite[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("organizations")
+}
+
 model User {
   id       String @id @default(uuid())
   name     String
@@ -35,6 +50,10 @@ model User {
   role            UserRole  @default(employee)
   refunds         Refunds[] @relation("RefundOwner")
   reviewedRefunds Refunds[] @relation("RefundReviewer")
+  invitesCreated  Invite[]
+
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
@@ -60,8 +79,33 @@ model Refunds {
   reviewedById String? @map("reviewed_by_id")
   reviewedBy   User?   @relation("RefundReviewer", fields: [reviewedById], references: [id])
 
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
 
+  @@index([organizationId, status])
   @@map("refunds")
+}
+
+// Link de convite: o gestor gera, manda para a equipe (WhatsApp, e-mail...) e quem abrir se cadastra na empresa
+model Invite {
+  id    String   @id @default(uuid())
+  token String   @unique
+  role  UserRole @default(employee)
+
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  usesCount Int       @default(0) @map("uses_count")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("invites")
 }

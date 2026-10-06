@@ -6,11 +6,15 @@ Feita com Node.js, Express, Prisma (PostgreSQL), Zod e JWT. Os comprovantes fica
 
 ## Como funciona
 
-1. O funcionário cria a conta (`POST /users`) e faz login (`POST /sessions`)
-2. Envia a foto do comprovante (`POST /uploads`) e recebe o `filename`
-3. Cria o pedido com esse `filename` (`POST /refunds`), que começa como **pendente**
-4. O gestor lista os pedidos (`GET /refunds`) e **aprova** ou **recusa** com um motivo
-5. Enquanto está pendente, o funcionário pode cancelar o pedido
+Cada empresa cliente tem seu próprio espaço: usuários, pedidos e comprovantes de uma empresa nunca aparecem para outra.
+
+1. Alguém cadastra a empresa (`POST /organizations`) e vira o primeiro gestor
+2. O gestor gera um link de convite (`POST /invites`) e manda para a equipe
+3. Quem abre o link se cadastra (`POST /users` com o `inviteToken`) e faz login (`POST /sessions`)
+4. O funcionário envia a foto do comprovante (`POST /uploads`) e recebe o `filename`
+5. Cria o pedido com esse `filename` (`POST /refunds`), que começa como **pendente**
+6. O gestor lista os pedidos (`GET /refunds`) e **aprova** ou **recusa** com um motivo
+7. Enquanto está pendente, o funcionário pode cancelar o pedido
 
 ## Rodando localmente
 
@@ -21,7 +25,7 @@ npm install
 cp .env.example .env          # depois preencha o JWT_SECRET (veja abaixo)
 npm run db:up                 # sobe o Postgres no Docker
 npm run db:migrate            # cria as tabelas
-npm run create-manager -- "Seu Nome" voce@empresa.com   # a senha é pedida em seguida
+npm run create-manager -- "Seu Nome" voce@empresa.com "Sua Empresa"   # a senha é pedida em seguida
 npm run dev                   # http://localhost:3333
 ```
 
@@ -48,13 +52,14 @@ npm run dev                   # http://localhost:3333
 | `npm start` | Roda a versão de produção (as variáveis precisam estar no ambiente) |
 | `npm run db:up` | Sobe o Postgres de desenvolvimento no Docker |
 | `npm run db:migrate` | Aplica as migrações no banco do `DATABASE_URL` |
-| `npm run create-manager -- "Nome" email` | Cria um gestor ou promove uma conta existente |
-| `npm run create-manager:prod -- "Nome" email` | O mesmo, no banco de produção (lê o `.env.production`) |
+| `npm run create-manager -- "Nome" email "Empresa"` | Cria uma empresa com esse gestor, ou promove uma conta existente |
+| `npm run create-manager:prod -- "Nome" email "Empresa"` | O mesmo, no banco de produção (lê o `.env.production`) |
 
 ## Usuários e permissões
 
-- Todo cadastro público vira **funcionário** (`employee`)
-- **Gestores** (`manager`) só são criados pelo `npm run create-manager`, rodado por quem tem acesso ao banco
+- Quem cadastra a empresa é o primeiro **gestor** (`manager`)
+- Os demais entram pelo link de convite, com o papel escolhido pelo gestor ao gerar o link
+- `npm run create-manager` cria uma empresa com um gestor direto no banco (ou promove uma conta existente), para administração
 - As rotas privadas exigem o cabeçalho `Authorization: Bearer <token>`
 
 ## Rotas
@@ -63,8 +68,10 @@ npm run dev                   # http://localhost:3333
 
 | Método | Rota | Corpo | Resposta |
 |---|---|---|---|
-| POST | `/users` | `{ name, email, password }` | 201 |
-| POST | `/sessions` | `{ email, password }` | `{ token, user }` |
+| POST | `/organizations` | `{ organizationName, name, email, password }` | 201. Cria a empresa e o primeiro gestor |
+| GET | `/invites/:token` | | `{ organizationName, role, expiresAt }`. Mostra de qual empresa é o convite |
+| POST | `/users` | `{ name, email, password, inviteToken }` | 201. Cadastro só com convite válido; o papel vem do convite |
+| POST | `/sessions` | `{ email, password }` | `{ token, user }` (o `user` traz a `organization`) |
 
 ### Funcionário
 
@@ -82,6 +89,11 @@ npm run dev                   # http://localhost:3333
 | GET | `/refunds` | Lista todos os pedidos. Filtro opcional `?name=` (nome do funcionário) |
 | PATCH | `/refunds/:id/approve` | Aprova um pedido pendente |
 | PATCH | `/refunds/:id/reject` | Recusa um pedido pendente: `{ reason }` |
+| GET | `/users` | Equipe da empresa |
+| POST | `/invites` | Gera um link de convite: `{ role }` (`employee` ou `manager`), vale 7 dias e serve para várias pessoas |
+| GET | `/invites` | Convites ainda válidos |
+| DELETE | `/invites/:id` | Cancela um convite |
+| PATCH | `/organizations/me` | Renomeia a empresa: `{ name }` |
 
 ### Funcionário e gestor
 
@@ -89,6 +101,7 @@ npm run dev                   # http://localhost:3333
 |---|---|---|
 | GET | `/refunds/:id` | Detalhe do pedido (funcionário só vê os próprios) |
 | GET | `/uploads/:filename` | Imagem do comprovante (funcionário só vê os próprios) |
+| GET | `/organizations/me` | Dados da empresa |
 
 As listagens aceitam `?status=pending|approved|rejected`, `?page=` e `?perPage=` (máximo 50).
 
@@ -148,12 +161,14 @@ S3_SECRET_ACCESS_KEY=<secret key>
 CORS_ORIGIN=<endereço do front, quando existir>
 ```
 
-### 3. Primeiro gestor
+### 3. Primeira empresa
 
-O plano grátis do Render não dá acesso ao terminal do servidor. Por isso o gestor é criado a partir do seu computador: crie um arquivo `.env.production` com `JWT_SECRET` e o `DATABASE_URL` do Supabase (ele não vai para o git) e rode:
+Cada empresa se cadastra sozinha pelo site (ou `POST /organizations`), e quem cadastra vira o gestor.
+
+Para administrar direto no banco de produção (o plano grátis do Render não dá acesso ao terminal do servidor), crie um `.env.production` com `JWT_SECRET` e o `DATABASE_URL` do Supabase (ele não vai para o git) e rode:
 
 ```bash
-npm run create-manager:prod -- "Seu Nome" voce@empresa.com
+npm run create-manager:prod -- "Seu Nome" voce@empresa.com "Sua Empresa"
 ```
 
 ### Limites do plano grátis

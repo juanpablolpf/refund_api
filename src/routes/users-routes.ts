@@ -1,9 +1,14 @@
 import { Router } from "express";
 import { UsersController } from "@/controllers/users-controller";
+import { verifyUserAuthorization } from "@/middlewares/verify-user-authorization";
 
-const usersRoutes = Router()
 const usersController = new UsersController()
 
-usersRoutes.post("/", usersController.create)
+// Cadastro por link de convite
+const publicUsersRoutes = Router()
+publicUsersRoutes.post("/", usersController.create)
 
-export{usersRoutes}
+const usersRoutes = Router()
+usersRoutes.get("/", verifyUserAuthorization(["manager"]), usersController.index)
+
+export{usersRoutes, publicUsersRoutes}

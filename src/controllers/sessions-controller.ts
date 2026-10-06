@@ -9,13 +9,16 @@ import { compare } from "bcrypt"
 class SessionsController {
     async create(request: Request, response: Response) {
         const bodySchema = z.object({
-            email: z.string().email({message: "E-mail inválido"}),
+            email: z.string().trim().email({message: "E-mail inválido"}).toLowerCase(),
             password: z.string(),
         })
 
         const {email, password} = bodySchema.parse(request.body)
 
-        const user = await prisma.user.findFirst({where: {email}})
+        const user = await prisma.user.findUnique({
+            where: {email},
+            include: {organization: {select: {id: true, name: true}}},
+        })
 
         if (!user) {
             throw new AppError("E-mail ou senha inválido", 401)
@@ -29,7 +32,7 @@ class SessionsController {
 
         const {secret, expiresIn} = authConfig.jwt
 
-        const token = sign({role: user.role}, secret, {
+        const token = sign({role: user.role, org: user.organizationId}, secret, {
             subject: user.id,
             expiresIn,
         })

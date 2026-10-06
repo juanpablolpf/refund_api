@@ -9,6 +9,7 @@ import { storage } from "@/providers/storage"
 
 import { ZodError } from "zod"
 import { AppError } from "@/utils/AppError"
+import { authUser } from "@/utils/auth-user"
 
 class UploadsController {
     async create (request: Request, response: Response) {
@@ -61,10 +62,11 @@ class UploadsController {
 
         const {filename} = result.data
 
-        const refund = await prisma.refunds.findFirst({where: {filename}})
+        const user = authUser(request)
+        const refund = await prisma.refunds.findFirst({where: {filename, organizationId: user.organizationId}})
 
-        const isOwner = refund?.userId === request.user?.id
-        const isManager = request.user?.role === "manager"
+        const isOwner = refund?.userId === user.id
+        const isManager = user.role === "manager"
 
         if (!refund || (!isOwner && !isManager)) {
             throw new AppError("Arquivo não encontrado", 404)

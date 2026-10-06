@@ -3,36 +3,57 @@ import {prisma} from "@/database/prisma"
 import {z} from "zod"
 import { AppError } from "@/utils/AppError"
 import { hash } from "bcrypt"
+import { authUser } from "@/utils/auth-user"
+import { activeInviteWhere } from "@/controllers/invites-controller"
+import { ensureEmailIsFree, personSchema, userPublicSelect } from "@/utils/user-schemas"
 
 class UsersController {
-    // Cadastro público: sempre cria "employee".
-    // Gestores são criados com `npm run create-manager`.
+    // Cadastro público só com link de convite: a empresa e o papel vêm do convite.
+    // Para criar uma empresa nova, o caminho é POST /organizations.
     async create(request: Request, response: Response) {
-        const bodySchema = z.object({
-            name: z.string().trim().min(2, {message: "Nome é obrigatório"}),
-            email: z.string().trim().email({message: "E-mail inválido"}).toLowerCase(),
-            password: z.string().min(6, {message: "A senha deve ter pelo menos 6 dígitos"}),
+        const bodySchema = personSchema.extend({
+            inviteToken: z.string({required_error: "O cadastro é feito pelo link de convite da sua empresa"}).min(10),
         })
 
-        const {name, email, password} = bodySchema.parse(request.body)
+        const {name, email, password, inviteToken} = bodySchema.parse(request.body)
 
-        const userWithSameEmail = await prisma.user.findFirst({where: {email}})
+        const invite = await prisma.invite.findFirst({where: {token: inviteToken, ...activeInviteWhere()}})
 
-        if (userWithSameEmail) {
-            throw new AppError("Já existe um usuário cadastrado com esse e-mail")
+        if (!invite) {
+            throw new AppError("Convite inválido ou vencido. Peça um novo link ao gestor da sua empresa.")
         }
+
+        await ensureEmailIsFree(email)
 
         const hashedPassword = await hash(password, 8)
 
-        await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-            }
-        })
+        await prisma.$transaction([
+            prisma.user.create({
+                data: {
+                    name,
+                    email,
+                    password: hashedPassword,
+                    role: invite.role,
+                    organizationId: invite.organizationId,
+                },
+            }),
+            prisma.invite.update({where: {id: invite.id}, data: {usesCount: {increment: 1}}}),
+        ])
 
         response.status(201).json()
+    }
+
+    // Gestor: equipe da própria empresa
+    async index(request: Request, response: Response) {
+        const {organizationId} = authUser(request)
+
+        const users = await prisma.user.findMany({
+            where: {organizationId},
+            orderBy: [{role: "desc"}, {name: "asc"}],
+            select: userPublicSelect,
+        })
+
+        response.json(users)
     }
 }
 

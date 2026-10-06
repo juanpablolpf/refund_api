@@ -1,28 +1,30 @@
-// Uso: npm run create-manager -- "Nome" email@empresa.com
-// A senha é pedida depois, sem aparecer na tela nem no histórico do terminal.
-// Se o e-mail já existir, a conta é promovida a gestor (a senha não muda).
+// Uso: npm run create-manager -- "Nome" email@empresa.com "Nome da empresa"
+// Cria uma empresa nova com essa pessoa como gestora. A senha é pedida depois, sem aparecer na tela.
+// Se o e-mail já existir, a conta é promovida a gestor na empresa dela (a senha não muda).
 import readline from "node:readline"
 import { hash } from "bcrypt"
 import { z } from "zod"
 import { prisma } from "@/database/prisma"
 
-const USAGE = 'Uso: npm run create-manager -- "Nome" email@empresa.com'
+const USAGE = 'Uso: npm run create-manager -- "Nome" email@empresa.com "Nome da empresa"'
 
 const argsSchema = z.object({
     name: z.string().trim().min(2, "Nome é obrigatório"),
     email: z.string().trim().email("E-mail inválido").toLowerCase(),
+    organizationName: z.string().trim(),
 })
 
 const passwordSchema = z.string().min(6, "A senha deve ter pelo menos 6 caracteres")
 
-// O nome pode chegar em vários pedaços (ex.: aspas perdidas no Windows),
-// então tudo antes do e-mail vira o nome
+// Os nomes podem chegar em vários pedaços (ex.: aspas perdidas no Windows):
+// tudo antes do e-mail é o nome da pessoa, tudo depois é o nome da empresa
 function parseArgs(args: string[]) {
     const emailIndex = args.findIndex((arg) => arg.includes("@"))
 
     return argsSchema.safeParse({
         name: args.slice(0, emailIndex).join(" "),
         email: emailIndex >= 0 ? args[emailIndex] : "",
+        organizationName: emailIndex >= 0 ? args.slice(emailIndex + 1).join(" ") : "",
     })
 }
 
@@ -80,7 +82,7 @@ async function main() {
         return
     }
 
-    const {name, email} = parsed.data
+    const {name, email, organizationName} = parsed.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
 
@@ -90,12 +92,22 @@ async function main() {
         return
     }
 
+    if (organizationName.length < 2) {
+        console.error(USAGE)
+        console.error("Informe o nome da empresa para criar um gestor novo")
+        process.exitCode = 1
+        return
+    }
+
     const password = await askPassword()
 
-    await prisma.user.create({
-        data: { name, email, password: await hash(password, 8), role: "manager" },
+    await prisma.organization.create({
+        data: {
+            name: organizationName,
+            users: { create: { name, email, password: await hash(password, 8), role: "manager" } },
+        },
     })
-    console.log(`Gestor ${email} criado.`)
+    console.log(`Gestor ${email} criado na empresa "${organizationName}".`)
 }
 
 main()

@@ -6,26 +6,46 @@ import { prisma } from "@/database/prisma"
 
 export const api = () => request(app)
 
+// Empresa padrão de cada teste (recriada no resetDatabase)
+let defaultOrganizationId = ""
+
 export async function resetDatabase() {
+    await prisma.invite.deleteMany()
     await prisma.refunds.deleteMany()
     await prisma.user.deleteMany()
+    await prisma.organization.deleteMany()
+
+    defaultOrganizationId = (await createOrganization("Empresa Teste")).id
+}
+
+export function createOrganization(name: string) {
+    return prisma.organization.create({data: {name}})
 }
 
 let userCount = 0
 
 // Cria o usuário direto no banco e faz login pela API
-export async function createUser(role: UserRole = "employee") {
+export async function createUser(role: UserRole = "employee", organizationId = defaultOrganizationId) {
     userCount++
     const email = `${role}${userCount}@teste.com`
     const password = "123456"
 
     const user = await prisma.user.create({
-        data: {name: `${role} ${userCount}`, email, password: await hash(password, 4), role},
+        data: {name: `${role} ${userCount}`, email, password: await hash(password, 4), role, organizationId},
     })
 
     const response = await api().post("/sessions").send({email, password})
 
     return {user, token: response.body.token as string}
+}
+
+export async function createInvite(managerToken: string, role: UserRole = "employee") {
+    const response = await api()
+        .post("/invites")
+        .set("Authorization", `Bearer ${managerToken}`)
+        .send({role})
+
+    return response.body as {id: string; token: string; role: UserRole}
 }
 
 export async function uploadReceipt(token: string) {
