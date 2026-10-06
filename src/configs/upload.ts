@@ -8,7 +8,8 @@ const UPLOADS_FOLDER = path.resolve(TMP_FOLDER, "uploads")
 
 const MAX_SIZE = 3
 const MAX_FILE_SIZE = 1024 * 1024 * 3 // 3mb
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"]
+// Tipo informado pelo navegador (primeira barreira); o conteúdo real é conferido depois em utils/file-type
+const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"]
 
 const MULTER: multer.Options = {
     storage: multer.diskStorage({
@@ -31,6 +32,6 @@ export default{
     UPLOADS_FOLDER,
     MULTER,
     MAX_FILE_SIZE,
-    ACCEPTED_IMAGE_TYPES,
+    ACCEPTED_TYPES,
     MAX_SIZE,
 }

@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { Response } from "express"
 import uploadConfig from "@/configs/upload"
+import { contentTypeFor } from "@/utils/file-type"
 import { StorageProvider } from "./storage-provider"
 
 // Guarda os comprovantes em tmp/uploads. Usado em desenvolvimento e nos testes.
@@ -34,6 +35,6 @@ export class DiskStorage implements StorageProvider {
             return
         }
 
-        response.sendFile(this.filePath(filename))
+        response.sendFile(this.filePath(filename), {headers: {"Content-Type": contentTypeFor(filename)}})
     }
 }

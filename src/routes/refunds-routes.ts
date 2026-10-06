@@ -41,6 +41,12 @@ refundsRoutes.patch(
     refundsController.reject
 )
 
+refundsRoutes.patch(
+    "/:id",
+    verifyUserAuthorization(["employee"]),
+    refundsController.update
+)
+
 refundsRoutes.delete(
     "/:id",
     verifyUserAuthorization(["employee"]),

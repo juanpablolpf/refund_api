@@ -77,32 +77,37 @@ async function review(
     })
 }
 
+const refundBodySchema = z.object({
+    name: z.string().trim().min(1, {message: "Informe o nome da solicitação"}),
+    category: CategoriesEnum,
+    amountInCents: z
+        .number()
+        .int({message: "Informe o valor em centavos (ex.: R$ 35,50 = 3550)"})
+        .positive({message: "O valor precisa ser positivo"}),
+    filename: z.string().regex(/^[a-f0-9]{20}-[a-zA-Z0-9._-]+$/, {message: "Arquivo inválido"}),
+})
+
+// O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
+async function ensureReceiptAvailable(filename: string) {
+    if (!(await storage.exists(filename))) {
+        throw new AppError("Comprovante não encontrado. Envie o arquivo antes de salvar a solicitação")
+    }
+
+    const fileInUse = await prisma.refunds.findFirst({where: {filename}, select: {id: true}})
+
+    if (fileInUse) {
+        throw new AppError("Esse comprovante já está em outra solicitação")
+    }
+}
+
 class RefundsController {
     async create (request: Request, response: Response) {
-        const bodySchema = z.object({
-            name: z.string().trim().min(1, {message: "Informe o nome da solicitação"}),
-            category: CategoriesEnum,
-            amountInCents: z
-                .number()
-                .int({message: "Informe o valor em centavos (ex.: R$ 35,50 = 3550)"})
-                .positive({message: "O valor precisa ser positivo"}),
-            filename: z.string().regex(/^[a-f0-9]{20}-[a-zA-Z0-9._-]+$/, {message: "Arquivo inválido"}),
-        })
 
-        const {name, category, amountInCents, filename} = bodySchema.parse(request.body)
+        const {name, category, amountInCents, filename} = refundBodySchema.parse(request.body)
 
         const user = authUser(request)
 
-        // O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
-        if (!(await storage.exists(filename))) {
-            throw new AppError("Comprovante não encontrado. Envie o arquivo antes de criar a solicitação")
-        }
-
-        const fileInUse = await prisma.refunds.findFirst({where: {filename}, select: {id: true}})
-
-        if (fileInUse) {
-            throw new AppError("Esse comprovante já está em outra solicitação")
-        }
+        await ensureReceiptAvailable(filename)
 
         const refund = await prisma.refunds.create({
             data: {
@@ -192,6 +197,48 @@ class RefundsController {
         })
 
         response.json(refund)
+    }
+
+    // Funcionário corrige um pedido próprio que ainda não foi analisado
+    async update(request: Request, response: Response) {
+        const {id} = paramsSchema.parse(request.params)
+
+        const changes = refundBodySchema.partial()
+            .refine((body) => Object.values(body).some((value) => value !== undefined), {message: "Nada para alterar"})
+            .parse(request.body)
+
+        const refund = await prisma.refunds.findUnique({where: {id}})
+
+        if (!refund || refund.userId !== authUser(request).id) {
+            throw new AppError("Solicitação não encontrada", 404)
+        }
+
+        const replacesReceipt = changes.filename !== undefined && changes.filename !== refund.filename
+
+        if (replacesReceipt) {
+            await ensureReceiptAvailable(changes.filename!)
+        }
+
+        // Só altera se continuar pendente (evita editar algo que o gestor acabou de analisar)
+        const {count} = await prisma.refunds.updateMany({
+            where: {id, status: "pending"},
+            data: changes,
+        })
+
+        if (count === 0) {
+            throw new AppError("Só é possível editar solicitações pendentes", 409)
+        }
+
+        if (replacesReceipt) {
+            await storage.delete(refund.filename)
+        }
+
+        const updated = await prisma.refunds.findUnique({
+            where: {id},
+            include: {user: userPublicFields, reviewedBy: userPublicFields},
+        })
+
+        response.json(updated)
     }
 
     // Funcionário cancela um pedido próprio que ainda não foi analisado

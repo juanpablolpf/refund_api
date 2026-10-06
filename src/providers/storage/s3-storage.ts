@@ -13,13 +13,9 @@ import {
 } from "@aws-sdk/client-s3"
 import uploadConfig from "@/configs/upload"
 import { env } from "@/env"
+import { contentTypeFor } from "@/utils/file-type"
 import { StorageProvider } from "./storage-provider"
 
-const CONTENT_TYPES: Record<string, string> = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-}
 
 // Guarda os comprovantes num bucket compatível com S3 (Supabase Storage, Cloudflare R2, AWS S3...)
 export class S3Storage implements StorageProvider {
@@ -37,7 +33,7 @@ export class S3Storage implements StorageProvider {
 
     async save(filename: string) {
         const tmpPath = path.resolve(uploadConfig.TMP_FOLDER, filename)
-        const contentType = CONTENT_TYPES[path.extname(filename).toLowerCase()] ?? "application/octet-stream"
+        const contentType = contentTypeFor(filename)
 
         try {
             await this.client.send(new PutObjectCommand({

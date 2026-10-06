@@ -10,6 +10,9 @@ import { storage } from "@/providers/storage"
 import { ZodError } from "zod"
 import { AppError } from "@/utils/AppError"
 import { authUser } from "@/utils/auth-user"
+import { detectReceiptType } from "@/utils/file-type"
+
+const INVALID_TYPE = "Envie uma foto (JPG ou PNG) ou um PDF"
 
 class UploadsController {
     async create (request: Request, response: Response) {
@@ -19,8 +22,8 @@ class UploadsController {
                 mimetype: z
                     .string()
                     .refine(
-                        (type) => uploadConfig.ACCEPTED_IMAGE_TYPES.includes(type),
-                        `Formato de arquivo inválido. Formatos permitidos: ${uploadConfig.ACCEPTED_IMAGE_TYPES}`
+                        (type) => uploadConfig.ACCEPTED_TYPES.includes(type),
+                        INVALID_TYPE
                 ),
                 size: z
                     .number()
@@ -33,9 +36,27 @@ class UploadsController {
             .passthrough()
 
             const file = fileSchema.parse(request.file)
-            await storage.save(file.filename)
+            const tmpPath = path.resolve(uploadConfig.TMP_FOLDER, file.filename)
 
-            response.json({filename: file.filename})
+            const type = await detectReceiptType(tmpPath)
+
+            if (!type) {
+                await fs.promises.rm(tmpPath, {force: true})
+                throw new AppError(INVALID_TYPE)
+            }
+
+            // A extensão do arquivo salvo segue o conteúdo real (ela define o tipo na hora de abrir)
+            const dot = file.filename.lastIndexOf(".")
+            const baseName = dot > 20 ? file.filename.slice(0, dot) : file.filename
+            const filename = `${baseName}${type.ext}`
+
+            if (filename !== file.filename) {
+                await fs.promises.rename(tmpPath, path.resolve(uploadConfig.TMP_FOLDER, filename))
+            }
+
+            await storage.save(filename)
+
+            response.json({filename})
 
         } catch (error) {
             if(error instanceof ZodError){
@@ -71,6 +92,10 @@ class UploadsController {
         if (!refund || (!isOwner && !isManager)) {
             throw new AppError("Arquivo não encontrado", 404)
         }
+
+        // O navegador usa o tipo enviado, sem tentar adivinhar pelo conteúdo, e abre o arquivo na própria aba
+        response.setHeader("X-Content-Type-Options", "nosniff")
+        response.setHeader("Content-Disposition", "inline")
 
         await storage.send(filename, response)
     }

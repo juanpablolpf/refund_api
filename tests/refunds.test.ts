@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { storage } from "@/providers/storage"
 import { api, createRefund, createUser, resetDatabase, uploadReceipt } from "./helpers"
+import { prisma } from "@/database/prisma"
 
 const MISSING_ID = "00000000-0000-4000-8000-000000000000"
 
@@ -168,6 +169,65 @@ describe("aprovar e recusar", () => {
         const response = await api().patch(`/refunds/${MISSING_ID}/approve`).set("Authorization", `Bearer ${token}`)
 
         expect(response.status).toBe(404)
+    })
+})
+
+describe("PATCH /refunds/:id (editar)", () => {
+    it("dono corrige um pedido pendente", async () => {
+        const {token} = await createUser()
+        const {body: refund} = await createRefund(token)
+
+        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`)
+            .send({name: "Jantar com cliente", amountInCents: 9990, category: "others"})
+
+        expect(response.status).toBe(200)
+        expect(response.body).toMatchObject({name: "Jantar com cliente", amountInCents: 9990, category: "others", status: "pending"})
+    })
+
+    it("trocar o comprovante apaga o antigo", async () => {
+        const {token} = await createUser()
+        const {body: refund} = await createRefund(token)
+        const newFile = await uploadReceipt(token)
+
+        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`).send({filename: newFile})
+
+        expect(response.body.filename).toBe(newFile)
+        expect(await storage.exists(refund.filename)).toBe(false)
+        expect(await storage.exists(newFile)).toBe(true)
+    })
+
+    it("não usa comprovante de outro pedido", async () => {
+        const {token} = await createUser()
+        const {body: first} = await createRefund(token)
+        const {body: second} = await createRefund(token)
+
+        const response = await api().patch(`/refunds/${second.id}`).set("Authorization", `Bearer ${token}`).send({filename: first.filename})
+
+        expect(response.status).toBe(400)
+    })
+
+    it("não edita pedido já analisado", async () => {
+        const employee = await createUser()
+        const manager = await createUser("manager")
+        const {body: refund} = await createRefund(employee.token)
+        await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${manager.token}`)
+
+        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${employee.token}`).send({amountInCents: 1})
+
+        expect(response.status).toBe(409)
+        expect((await prisma.refunds.findUnique({where: {id: refund.id}}))?.amountInCents).toBe(3550)
+    })
+
+    it("outra pessoa não edita; corpo vazio é recusado", async () => {
+        const maria = await createUser()
+        const joao = await createUser()
+        const {body: refund} = await createRefund(maria.token)
+
+        const other = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${joao.token}`).send({name: "Hack"})
+        const empty = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${maria.token}`).send({})
+
+        expect(other.status).toBe(404)
+        expect(empty.status).toBe(400)
     })
 })
 

@@ -48,12 +48,22 @@ export async function createInvite(managerToken: string, role: UserRole = "emplo
     return response.body as {id: string; token: string; role: UserRole}
 }
 
-export async function uploadReceipt(token: string) {
-    const response = await api()
+// Começos de arquivo que a API reconhece como JPG, PNG e PDF
+export const FILES = {
+    jpg: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("resto da foto")]),
+    png: Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("resto")]),
+    pdf: Buffer.from("%PDF-1.4 nota fiscal de teste"),
+}
+
+export function upload(token: string, content = FILES.jpg, filename = "comprovante.jpg", contentType = "image/jpeg") {
+    return api()
         .post("/uploads")
         .set("Authorization", `Bearer ${token}`)
-        .attach("file", Buffer.from("imagem de teste"), {filename: "comprovante.jpg", contentType: "image/jpeg"})
+        .attach("file", content, {filename, contentType})
+}
 
+export async function uploadReceipt(token: string) {
+    const response = await upload(token)
     return response.body.filename as string
 }
 
