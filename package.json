@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
-    "build": "tsup src/server.ts src/scripts/create-manager.ts --out-dir build --clean",
+    "build": "tsup src/server.ts src/scripts/create-manager.ts src/scripts/reset-password.ts --out-dir build --clean",
     "start": "node build/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -16,6 +16,8 @@
     "db:migrate": "prisma migrate deploy",
     "create-manager": "tsx --env-file=.env src/scripts/create-manager.ts",
     "create-manager:prod": "tsx --env-file=.env.production src/scripts/create-manager.ts",
+    "reset-password": "tsx --env-file=.env src/scripts/reset-password.ts",
+    "reset-password:prod": "tsx --env-file=.env.production src/scripts/reset-password.ts",
     "postinstall": "prisma generate"
   },
   "author": "Juan Pablo",
