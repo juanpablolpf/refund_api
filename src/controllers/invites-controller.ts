@@ -7,6 +7,8 @@ import { authUser } from "@/utils/auth-user"
 
 const INVITE_DAYS = 7
 
+export const INVALID_INVITE = "Convite inválido ou vencido. Peça um novo link ao gestor da sua empresa."
+
 // Convite válido: não foi revogado e ainda não venceu
 export function activeInviteWhere() {
     return {revokedAt: null, expiresAt: {gt: new Date()}}
@@ -18,7 +20,7 @@ class InvitesController {
     async create(request: Request, response: Response) {
         const user = authUser(request)
 
-        const {role} = z.object({role: z.enum(["employee", "manager"]).default("employee")}).parse(request.body ?? {})
+        const {role} = z.object({role: z.enum(["employee", "manager"]).default("employee")}).parse(request.body)
 
         const invite = await prisma.invite.create({
             data: {
@@ -57,7 +59,7 @@ class InvitesController {
         })
 
         if (!invite) {
-            throw new AppError("Convite inválido ou vencido. Peça um novo link ao gestor da sua empresa.", 404)
+            throw new AppError(INVALID_INVITE, 404)
         }
 
         response.json({organizationName: invite.organization.name, role: invite.role, expiresAt: invite.expiresAt})

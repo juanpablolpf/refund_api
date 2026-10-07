@@ -1,17 +1,19 @@
 import { Request, Response } from "express"
 import crypto from "node:crypto"
 import { z } from "zod"
-import { hash } from "bcrypt"
 import { prisma } from "@/database/prisma"
 import { env } from "@/env"
 import { AppError } from "@/utils/AppError"
 import { personSchema } from "@/utils/user-schemas"
 import { mail } from "@/providers/mail"
 import { passwordResetMail } from "@/providers/mail/templates"
+import { hashPassword } from "@/utils/password"
 
 const LINK_MINUTES = 60
 // Evita encher a caixa de alguém: no máximo um e-mail por minuto para a mesma conta
 const RESEND_AFTER_SECONDS = 60
+
+const LINK_EXPIRED = "Este link não vale mais. Peça um novo em \"Esqueci minha senha\"."
 
 const appUrl = env.APP_URL ?? env.CORS_ORIGIN ?? "http://localhost:5180"
 
@@ -64,7 +66,7 @@ class PasswordResetController {
         const resetToken = await prisma.passwordResetToken.findUnique({where: {tokenHash: hashToken(token)}})
 
         if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
-            throw new AppError("Este link não vale mais. Peça um novo em \"Esqueci minha senha\".")
+            throw new AppError(LINK_EXPIRED)
         }
 
         // Marca como usado só se ninguém usou antes (dois cliques ao mesmo tempo)
@@ -74,13 +76,13 @@ class PasswordResetController {
         })
 
         if (count === 0) {
-            throw new AppError("Este link não vale mais. Peça um novo em \"Esqueci minha senha\".")
+            throw new AppError(LINK_EXPIRED)
         }
 
         // Senha nova e todos os logins antigos desconectados
         await prisma.user.update({
             where: {id: resetToken.userId},
-            data: {password: await hash(password, 8), sessionVersion: {increment: 1}},
+            data: {password: await hashPassword(password), sessionVersion: {increment: 1}},
         })
 
         response.status(204).send()

@@ -1,9 +1,9 @@
 import { Request, Response } from "express"
 import { z } from "zod"
-import { hash } from "bcrypt"
 import { prisma } from "@/database/prisma"
 import { authUser } from "@/utils/auth-user"
 import { ensureEmailIsFree, personSchema } from "@/utils/user-schemas"
+import { hashPassword } from "@/utils/password"
 
 const organizationNameSchema = z.string().trim().min(2, {message: "Informe o nome da empresa"}).max(80)
 
@@ -20,7 +20,7 @@ class OrganizationsController {
             data: {
                 name: organizationName,
                 users: {
-                    create: {name, email, password: await hash(password, 8), role: "manager"},
+                    create: {name, email, password: await hashPassword(password), role: "manager"},
                 },
             },
             select: {id: true, name: true},

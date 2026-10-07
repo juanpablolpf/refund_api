@@ -15,6 +15,15 @@ describe("POST /uploads", () => {
         expect(response.status).toBe(400)
     })
 
+    it("recusa envio sem arquivo", async () => {
+        const { token } = await createUser("employee")
+
+        const response = await api().post("/uploads").set("Authorization", `Bearer ${token}`)
+
+        expect(response.status).toBe(400)
+        expect(response.body.message).toBe("Arquivo é obrigatório")
+    })
+
     it("recusa formato que não é imagem nem PDF", async () => {
         const {token} = await createUser()
 

@@ -12,12 +12,12 @@ export const errorHandling: ErrorRequestHandler = (
 ) => {
     if (error instanceof AppError) {
         response.status(error.statusCode).json({message: error.message})
-        return 
+        return
     }
 
     if (error instanceof ZodError) {
         response.status(400).json({
-            message: "validation error",
+            message: "Dados inválidos",
             issues: error.format()
         })
         return
@@ -25,7 +25,7 @@ export const errorHandling: ErrorRequestHandler = (
 
     if (error instanceof MulterError) {
         const message = error.code === "LIMIT_FILE_SIZE"
-            ? `Arquivo excede o tamanho máximo de ${uploadConfig.MAX_SIZE}MB`
+            ? `Arquivo excede o tamanho máximo de ${uploadConfig.MAX_SIZE_MB} MB`
             : "Envio de arquivo inválido"
 
         response.status(400).json({message})

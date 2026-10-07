@@ -1,11 +1,11 @@
 import { Request, Response } from "express"
 import { z } from "zod"
-import { compare, hash } from "bcrypt"
 import { prisma } from "@/database/prisma"
 import { AppError } from "@/utils/AppError"
 import { authUser } from "@/utils/auth-user"
 import { personSchema } from "@/utils/user-schemas"
 import { signSessionToken } from "@/utils/session-token"
+import { hashPassword, passwordMatches } from "@/utils/password"
 
 const meSelect = {
     id: true, name: true, email: true, role: true,
@@ -37,13 +37,13 @@ class MeController {
 
         const user = await prisma.user.findUniqueOrThrow({where: {id: authUser(request).id}})
 
-        if (!(await compare(currentPassword, user.password))) {
+        if (!(await passwordMatches(currentPassword, user.password))) {
             throw new AppError("A senha atual não confere")
         }
 
         const updated = await prisma.user.update({
             where: {id: user.id},
-            data: {password: await hash(newPassword, 8), sessionVersion: {increment: 1}},
+            data: {password: await hashPassword(newPassword), sessionVersion: {increment: 1}},
         })
 
         response.json({token: signSessionToken(updated)})

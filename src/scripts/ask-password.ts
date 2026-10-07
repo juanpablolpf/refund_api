@@ -1,7 +1,5 @@
 import readline from "node:readline"
-import { z } from "zod"
-
-const passwordSchema = z.string().min(6, "A senha deve ter pelo menos 6 caracteres")
+import { personSchema } from "@/utils/user-schemas"
 
 // Pede uma senha duas vezes no terminal sem mostrar o que é digitado.
 // Lança erro se for curta demais ou se as duas não forem iguais.
@@ -33,7 +31,7 @@ export async function askPassword(label: string) {
 
     try {
         const password = await ask(`${label} (não aparece ao digitar): `)
-        const parsed = passwordSchema.safeParse(password)
+        const parsed = personSchema.shape.password.safeParse(password)
 
         if (!parsed.success) {
             throw new Error(parsed.error.issues[0].message)

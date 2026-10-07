@@ -2,9 +2,9 @@ import { Request, Response } from "express"
 import {prisma} from "@/database/prisma"
 import {z} from "zod"
 import { AppError } from "@/utils/AppError"
-import { hash } from "bcrypt"
 import { authUser } from "@/utils/auth-user"
-import { activeInviteWhere } from "@/controllers/invites-controller"
+import { activeInviteWhere, INVALID_INVITE } from "@/controllers/invites-controller"
+import { hashPassword } from "@/utils/password"
 import { ensureEmailIsFree, personSchema, userPublicSelect } from "@/utils/user-schemas"
 
 class UsersController {
@@ -20,19 +20,17 @@ class UsersController {
         const invite = await prisma.invite.findFirst({where: {token: inviteToken, ...activeInviteWhere()}})
 
         if (!invite) {
-            throw new AppError("Convite inválido ou vencido. Peça um novo link ao gestor da sua empresa.")
+            throw new AppError(INVALID_INVITE)
         }
 
         await ensureEmailIsFree(email)
-
-        const hashedPassword = await hash(password, 8)
 
         await prisma.$transaction([
             prisma.user.create({
                 data: {
                     name,
                     email,
-                    password: hashedPassword,
+                    password: await hashPassword(password),
                     role: invite.role,
                     organizationId: invite.organizationId,
                 },

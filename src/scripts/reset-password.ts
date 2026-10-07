@@ -1,14 +1,14 @@
 // Uso: npm run reset-password -- email@empresa.com
-// Troca a senha de qualquer usuário. A senha nova é pedida depois, sem aparecer na tela.
-import { hash } from "bcrypt"
-import { z } from "zod"
+// Troca a senha de qualquer usuário e desconecta os logins abertos. A senha nova é pedida depois, sem aparecer na tela.
 import { prisma } from "@/database/prisma"
+import { hashPassword } from "@/utils/password"
+import { personSchema } from "@/utils/user-schemas"
 import { askPassword } from "./ask-password"
 
 const USAGE = "Uso: npm run reset-password -- email@empresa.com"
 
 async function main() {
-    const parsed = z.string().trim().email("E-mail inválido").toLowerCase().safeParse(process.argv[2] ?? "")
+    const parsed = personSchema.shape.email.safeParse(process.argv[2] ?? "")
 
     if (!parsed.success) {
         console.error(USAGE)
@@ -28,7 +28,7 @@ async function main() {
 
     const password = await askPassword(`Nova senha de ${email}`)
 
-    await prisma.user.update({ where: { id: user.id }, data: { password: await hash(password, 8) } })
+    await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(password), sessionVersion: { increment: 1 } } })
     console.log(`Senha de ${email} alterada.`)
 }
 

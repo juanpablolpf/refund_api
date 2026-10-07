@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/database/prisma"
 import { authUser } from "@/utils/auth-user"
 import { formatDateBR, monthRange } from "@/utils/period"
+import { statusSchema } from "@/utils/refund-schemas"
 
 const CATEGORY_NAMES = {
     food: "Alimentação",
@@ -23,7 +24,7 @@ const PERIODS = {
 
 const exportQuerySchema = z.object({
     period: z.enum(["this-month", "last-month", "all"]).default("this-month"),
-    status: z.enum(["pending", "approved", "rejected"]).optional(),
+    status: statusSchema.optional(),
     name: z.string().trim().optional().default(""),
 })
 
@@ -96,7 +97,7 @@ class RefundsReportsController {
         ])
 
         // ";" separa colunas no Excel em português; o BOM faz ele ler os acentos certo
-        const csv = "﻿" + [header, ...rows].map((row) => row.map(cell).join(";")).join("\r\n") + "\r\n"
+        const csv = "\uFEFF" + [header, ...rows].map((row) => row.map(cell).join(";")).join("\r\n") + "\r\n"
 
         response.setHeader("Content-Type", "text/csv; charset=utf-8")
         response.setHeader("Content-Disposition", `attachment; filename="reembolsos-${period}.csv"`)

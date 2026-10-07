@@ -1,9 +1,9 @@
 import { Request, Response } from "express"
-import { z} from "zod"
+import { z } from "zod"
 import {prisma} from "@/database/prisma"
 import { AppError } from "@/utils/AppError"
-import { compare } from "bcrypt"
 import { signSessionToken } from "@/utils/session-token"
+import { passwordMatches } from "@/utils/password"
 
 class SessionsController {
     async create(request: Request, response: Response) {
@@ -23,7 +23,7 @@ class SessionsController {
             throw new AppError("E-mail ou senha inválido", 401)
         }
 
-        const passwordMatched = await compare(password,user.password)
+        const passwordMatched = await passwordMatches(password, user.password)
 
         if (!passwordMatched) {
             throw new AppError("E-mail ou senha inválido", 401)

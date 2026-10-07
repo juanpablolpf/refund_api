@@ -5,17 +5,14 @@ import {prisma} from "@/database/prisma"
 import { AppError } from "@/utils/AppError";
 import { storage } from "@/providers/storage";
 import { authUser } from "@/utils/auth-user";
+import uploadConfig from "@/configs/upload"
+import { categorySchema, statusSchema } from "@/utils/refund-schemas"
+import { userPublicSelect } from "@/utils/user-schemas"
 
-const CategoriesEnum = z.enum(["food", "others", "services", "transport", "accommodation"])
-const StatusEnum = z.enum(["pending", "approved", "rejected"])
-
-// Dados do usuário que podem sair na resposta (nunca a senha)
-const userPublicFields = {
-    select: {id: true, name: true, email: true, role: true},
-}
+const userPublicFields = { select: userPublicSelect }
 
 const paginationSchema = z.object({
-    status: StatusEnum.optional(),
+    status: statusSchema.optional(),
     page: z.coerce.number().int().min(1).optional().default(1),
     perPage: z.coerce.number().int().min(1).max(50).optional().default(10),
 })
@@ -79,12 +76,12 @@ async function review(
 
 const refundBodySchema = z.object({
     name: z.string().trim().min(1, {message: "Informe o nome da solicitação"}),
-    category: CategoriesEnum,
+    category: categorySchema,
     amountInCents: z
         .number()
         .int({message: "Informe o valor em centavos (ex.: R$ 35,50 = 3550)"})
         .positive({message: "O valor precisa ser positivo"}),
-    filename: z.string().regex(/^[a-f0-9]{20}-[a-zA-Z0-9._-]+$/, {message: "Arquivo inválido"}),
+    filename: z.string().regex(uploadConfig.RECEIPT_FILENAME, {message: "Arquivo inválido"}),
 })
 
 // O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
@@ -101,8 +98,7 @@ async function ensureReceiptAvailable(filename: string) {
 }
 
 class RefundsController {
-    async create (request: Request, response: Response) {
-
+    async create(request: Request, response: Response) {
         const {name, category, amountInCents, filename} = refundBodySchema.parse(request.body)
 
         const user = authUser(request)

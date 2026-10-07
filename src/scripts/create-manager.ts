@@ -1,18 +1,15 @@
 // Uso: npm run create-manager -- "Nome" email@empresa.com "Nome da empresa"
 // Cria uma empresa nova com essa pessoa como gestora. A senha é pedida depois, sem aparecer na tela.
 // Se o e-mail já existir, a conta é promovida a gestor na empresa dela (a senha não muda).
-import { hash } from "bcrypt"
 import { z } from "zod"
 import { prisma } from "@/database/prisma"
+import { hashPassword } from "@/utils/password"
+import { personSchema } from "@/utils/user-schemas"
 import { askPassword } from "./ask-password"
 
 const USAGE = 'Uso: npm run create-manager -- "Nome" email@empresa.com "Nome da empresa"'
 
-const argsSchema = z.object({
-    name: z.string().trim().min(2, "Nome é obrigatório"),
-    email: z.string().trim().email("E-mail inválido").toLowerCase(),
-    organizationName: z.string().trim(),
-})
+const argsSchema = personSchema.pick({ name: true, email: true }).extend({ organizationName: z.string().trim() })
 
 // Os nomes podem chegar em vários pedaços (ex.: aspas perdidas no Windows):
 // tudo antes do e-mail é o nome da pessoa, tudo depois é o nome da empresa
@@ -58,7 +55,7 @@ async function main() {
     await prisma.organization.create({
         data: {
             name: organizationName,
-            users: { create: { name, email, password: await hash(password, 8), role: "manager" } },
+            users: { create: { name, email, password: await hashPassword(password), role: "manager" } },
         },
     })
     console.log(`Gestor ${email} criado na empresa "${organizationName}".`)
