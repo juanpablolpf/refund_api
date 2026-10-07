@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { RefundsController } from "@/controllers/refunds-controllers";
+import { RefundsReportsController } from "@/controllers/refunds-reports-controller";
 import { verifyUserAuthorization } from "@/middlewares/verify-user-authorization";
 
 const refundsRoutes = Router()
 const refundsController = new RefundsController()
+const reportsController = new RefundsReportsController()
 
 refundsRoutes.post(
     "/",
@@ -16,7 +18,25 @@ refundsRoutes.get(
     refundsController.index
 )
 
-// Precisa vir antes de "/:id", senão "me" seria lido como id
+// Rotas com nome fixo precisam vir antes de "/:id", senão o nome seria lido como id
+refundsRoutes.get(
+    "/summary",
+    verifyUserAuthorization(["manager"]),
+    reportsController.summary
+)
+
+refundsRoutes.get(
+    "/export",
+    verifyUserAuthorization(["manager"]),
+    reportsController.export
+)
+
+refundsRoutes.post(
+    "/approve",
+    verifyUserAuthorization(["manager"]),
+    refundsController.approveMany
+)
+
 refundsRoutes.get(
     "/me",
     verifyUserAuthorization(["employee"]),

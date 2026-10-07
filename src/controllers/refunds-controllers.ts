@@ -182,6 +182,23 @@ class RefundsController {
         response.json(refund)
     }
 
+    // Gestor aprova vários pedidos de uma vez (os que ainda estão pendentes na empresa dele)
+    async approveMany(request: Request, response: Response) {
+        const user = authUser(request)
+
+        const {ids} = z.object({
+            ids: z.array(z.string().uuid()).min(1, {message: "Selecione pelo menos uma solicitação"}).max(50),
+        }).parse(request.body)
+
+        const {count} = await prisma.refunds.updateMany({
+            where: {id: {in: ids}, organizationId: user.organizationId, status: "pending"},
+            data: {status: "approved", rejectionReason: null, reviewedById: user.id, reviewedAt: new Date()},
+        })
+
+        // Os que não entraram já tinham sido analisados (ou não são desta empresa)
+        response.json({approved: count, skipped: new Set(ids).size - count})
+    }
+
     async reject(request: Request, response: Response) {
         const {id} = paramsSchema.parse(request.params)
 

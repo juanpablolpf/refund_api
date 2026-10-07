@@ -91,6 +91,9 @@ npm run dev                   # http://localhost:3333
 | GET | `/refunds` | Lista todos os pedidos. Filtro opcional `?name=` (nome do funcionário) |
 | PATCH | `/refunds/:id/approve` | Aprova um pedido pendente |
 | PATCH | `/refunds/:id/reject` | Recusa um pedido pendente: `{ reason }` |
+| POST | `/refunds/approve` | Aprova vários pendentes de uma vez: `{ ids }` (até 50). Responde `{ approved, skipped }` |
+| GET | `/refunds/summary` | Resumo: pendentes (quantidade e R$) e aprovados/recusados no mês (horário de Brasília) |
+| GET | `/refunds/export` | Planilha CSV para o financeiro. Filtros: `period` (`this-month`, `last-month`, `all`), `status`, `name` |
 | GET | `/users` | Equipe da empresa |
 | POST | `/invites` | Gera um link de convite: `{ role }` (`employee` ou `manager`), vale 7 dias e serve para várias pessoas |
 | GET | `/invites` | Convites ainda válidos |
