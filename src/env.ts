@@ -26,7 +26,7 @@ const envSchema = z.object({
     // E-mails: "log" só mostra no terminal (desenvolvimento e testes); "resend" envia de verdade
     MAIL_DRIVER: z.enum(["log", "resend"]).default("log"),
     RESEND_API_KEY: optional(z.string()),
-    // Remetente, ex.: "Refund <nao-responda@seudominio.com>" (sem domínio verificado: "Refund <onboarding@resend.dev>")
+    // Remetente, ex.: "RefundPay <nao-responda@seudominio.com>" (sem domínio verificado: "RefundPay <onboarding@resend.dev>")
     MAIL_FROM: optional(z.string()),
 }).superRefine((env, ctx) => {
     const requireKeys = (keys: readonly (keyof typeof env)[], reason: string) => {

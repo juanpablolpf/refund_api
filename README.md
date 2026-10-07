@@ -1,4 +1,6 @@
-# Refund API
+# RefundPay API
+
+API do RefundPay, um produto TreeCore.
 
 API de solicitação de reembolso. O funcionário envia um pedido com o comprovante, e o gestor aprova ou recusa.
 
@@ -40,7 +42,7 @@ npm run dev                   # http://localhost:3333
 | `CORS_ORIGIN` | Endereço do front autorizado a chamar a API. Vazio libera qualquer origem |
 | `STORAGE_DRIVER` | `disk` guarda os comprovantes em `tmp/uploads`; `s3` usa um bucket (variáveis `S3_*`) |
 | `MAIL_DRIVER` | `log` só mostra os e-mails no terminal; `resend` envia pelo [Resend](https://resend.com) (exige `RESEND_API_KEY` e `MAIL_FROM`) |
-| `MAIL_FROM` | Remetente, ex.: `Refund <nao-responda@seudominio.com>`. Sem domínio verificado no Resend, só dá para enviar para o e-mail da sua conta do Resend, usando `Refund <onboarding@resend.dev>` |
+| `MAIL_FROM` | Remetente, ex.: `RefundPay <nao-responda@seudominio.com>`. Sem domínio verificado no Resend, só dá para enviar para o e-mail da sua conta do Resend, usando `RefundPay <onboarding@resend.dev>` |
 | `APP_URL` | Endereço do site, usado nos links dos e-mails (padrão: `CORS_ORIGIN`) |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Dados do bucket, obrigatórios quando `STORAGE_DRIVER=s3` |
 
