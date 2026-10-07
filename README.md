@@ -39,6 +39,9 @@ npm run dev                   # http://localhost:3333
 | `NODE_ENV` | `development` mostra as queries no terminal; `production` não |
 | `CORS_ORIGIN` | Endereço do front autorizado a chamar a API. Vazio libera qualquer origem |
 | `STORAGE_DRIVER` | `disk` guarda os comprovantes em `tmp/uploads`; `s3` usa um bucket (variáveis `S3_*`) |
+| `MAIL_DRIVER` | `log` só mostra os e-mails no terminal; `resend` envia pelo [Resend](https://resend.com) (exige `RESEND_API_KEY` e `MAIL_FROM`) |
+| `MAIL_FROM` | Remetente, ex.: `Refund <nao-responda@seudominio.com>`. Sem domínio verificado no Resend, só dá para enviar para o e-mail da sua conta do Resend, usando `Refund <onboarding@resend.dev>` |
+| `APP_URL` | Endereço do site, usado nos links dos e-mails (padrão: `CORS_ORIGIN`) |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Dados do bucket, obrigatórios quando `STORAGE_DRIVER=s3` |
 
 ## Scripts
@@ -74,6 +77,8 @@ npm run dev                   # http://localhost:3333
 | GET | `/invites/:token` | | `{ organizationName, role, expiresAt }`. Mostra de qual empresa é o convite |
 | POST | `/users` | `{ name, email, password, inviteToken }` | 201. Cadastro só com convite válido; o papel vem do convite |
 | POST | `/sessions` | `{ email, password }` | `{ token, user }` (o `user` traz a `organization`) |
+| POST | `/password/forgot` | `{ email }` | 204 sempre (não revela se o e-mail existe). Envia o link de senha nova, válido por 1 hora |
+| POST | `/password/reset` | `{ token, password }` | 204. O link só funciona uma vez e desconecta os logins antigos |
 
 ### Funcionário
 
@@ -107,6 +112,9 @@ npm run dev                   # http://localhost:3333
 | GET | `/refunds/:id` | Detalhe do pedido (funcionário só vê os próprios) |
 | GET | `/uploads/:filename` | Imagem do comprovante (funcionário só vê os próprios) |
 | GET | `/organizations/me` | Dados da empresa |
+| GET | `/me` | A própria conta, com a empresa |
+| PATCH | `/me` | Troca o próprio nome: `{ name }` |
+| PATCH | `/me/password` | Troca a senha: `{ currentPassword, newPassword }`. Desconecta os outros aparelhos e devolve `{ token }` novo para este |
 
 As listagens aceitam `?status=pending|approved|rejected`, `?page=` e `?perPage=` (máximo 50).
 

@@ -10,6 +10,7 @@ export const api = () => request(app)
 let defaultOrganizationId = ""
 
 export async function resetDatabase() {
+    await prisma.passwordResetToken.deleteMany()
     await prisma.invite.deleteMany()
     await prisma.refunds.deleteMany()
     await prisma.user.deleteMany()

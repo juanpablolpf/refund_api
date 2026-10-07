@@ -6,6 +6,8 @@ import { uploadsRoutes } from "./uploads-routes";
 import { organizationsRoutes, publicOrganizationsRoutes } from "./organizations-routes";
 import { invitesRoutes, publicInvitesRoutes } from "./invites-routes";
 import { publicUsersRoutes, usersRoutes } from "./users-routes";
+import { meRoutes } from "./me-routes";
+import { passwordRoutes } from "./password-routes";
 
 const routes = Router()
 
@@ -14,6 +16,7 @@ routes.use("/sessions", sessionsRoutes)
 routes.use("/organizations", publicOrganizationsRoutes)
 routes.use("/invites", publicInvitesRoutes)
 routes.use("/users", publicUsersRoutes)
+routes.use("/password", passwordRoutes)
 
 //Rotas privadas
 routes.use(ensureAuthenticated)
@@ -22,5 +25,6 @@ routes.use("/uploads", uploadsRoutes)
 routes.use("/organizations", organizationsRoutes)
 routes.use("/invites", invitesRoutes)
 routes.use("/users", usersRoutes)
+routes.use("/me", meRoutes)
 
 export {routes}

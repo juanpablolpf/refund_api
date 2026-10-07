@@ -19,15 +19,28 @@ const envSchema = z.object({
     S3_BUCKET: optional(z.string()),
     S3_ACCESS_KEY_ID: optional(z.string()),
     S3_SECRET_ACCESS_KEY: optional(z.string()),
+
+    // Endereço do site, usado nos links dos e-mails (padrão: CORS_ORIGIN)
+    APP_URL: optional(z.string().url()),
+
+    // E-mails: "log" só mostra no terminal (desenvolvimento e testes); "resend" envia de verdade
+    MAIL_DRIVER: z.enum(["log", "resend"]).default("log"),
+    RESEND_API_KEY: optional(z.string()),
+    // Remetente, ex.: "Refund <nao-responda@seudominio.com>" (sem domínio verificado: "Refund <onboarding@resend.dev>")
+    MAIL_FROM: optional(z.string()),
 }).superRefine((env, ctx) => {
-    if (env.STORAGE_DRIVER !== "s3") return
-
-    const required = ["S3_ENDPOINT", "S3_REGION", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"] as const
-
-    for (const key of required) {
-        if (!env[key]) {
-            ctx.addIssue({code: "custom", path: [key], message: `${key} é obrigatório quando STORAGE_DRIVER=s3`})
+    const requireKeys = (keys: readonly (keyof typeof env)[], reason: string) => {
+        for (const key of keys) {
+            if (!env[key]) ctx.addIssue({code: "custom", path: [key], message: `${key} é obrigatório quando ${reason}`})
         }
+    }
+
+    if (env.STORAGE_DRIVER === "s3") {
+        requireKeys(["S3_ENDPOINT", "S3_REGION", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"], "STORAGE_DRIVER=s3")
+    }
+
+    if (env.MAIL_DRIVER === "resend") {
+        requireKeys(["RESEND_API_KEY", "MAIL_FROM"], "MAIL_DRIVER=resend")
     }
 })
 
