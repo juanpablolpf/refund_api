@@ -8,7 +8,7 @@ const TMP_FOLDERS = [path.resolve("tmp"), path.resolve("tmp", "uploads")]
 
 function prisma(command: string, input?: string) {
     execSync(`npx prisma ${command}`, {
-        env: {...process.env, DATABASE_URL: TEST_DATABASE_URL},
+        env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
         input,
         stdio: input ? ["pipe", "ignore", "inherit"] : ["ignore", "ignore", "inherit"],
     })
@@ -20,7 +20,8 @@ function dropTestSchema() {
 
 function listFiles(folder: string) {
     if (!fs.existsSync(folder)) return []
-    return fs.readdirSync(folder, {withFileTypes: true})
+    return fs
+        .readdirSync(folder, { withFileTypes: true })
         .filter((entry) => entry.isFile())
         .map((entry) => path.join(folder, entry.name))
 }

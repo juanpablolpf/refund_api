@@ -18,16 +18,17 @@ export async function askPassword(label: string) {
     })
     rl.on("close", () => waiting.splice(0).forEach((resolve) => resolve("")))
 
-    const ask = (question: string) => new Promise<string>((resolve) => {
-        process.stdout.write(question)
-        const done = (answer: string) => {
-            process.stdout.write("\n")
-            resolve(answer)
-        }
-        const line = lines.shift()
-        if (line !== undefined) done(line)
-        else waiting.push(done)
-    })
+    const ask = (question: string) =>
+        new Promise<string>((resolve) => {
+            process.stdout.write(question)
+            const done = (answer: string) => {
+                process.stdout.write("\n")
+                resolve(answer)
+            }
+            const line = lines.shift()
+            if (line !== undefined) done(line)
+            else waiting.push(done)
+        })
 
     try {
         const password = await ask(`${label} (não aparece ao digitar): `)

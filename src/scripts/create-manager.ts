@@ -33,7 +33,7 @@ async function main() {
         return
     }
 
-    const {name, email, organizationName} = parsed.data
+    const { name, email, organizationName } = parsed.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
 

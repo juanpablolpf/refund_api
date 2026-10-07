@@ -9,36 +9,36 @@ beforeEach(resetDatabase)
 
 describe("POST /refunds", () => {
     it("cria pedido pendente com valor em centavos", async () => {
-        const {token} = await createUser()
+        const { token } = await createUser()
 
-        const response = await createRefund(token, {amountInCents: 3550})
+        const response = await createRefund(token, { amountInCents: 3550 })
 
         expect(response.status).toBe(201)
-        expect(response.body).toMatchObject({amountInCents: 3550, status: "pending"})
+        expect(response.body).toMatchObject({ amountInCents: 3550, status: "pending" })
     })
 
     it("recusa valor quebrado (não está em centavos)", async () => {
-        const {token} = await createUser()
+        const { token } = await createUser()
 
-        const response = await createRefund(token, {amountInCents: 35.5})
+        const response = await createRefund(token, { amountInCents: 35.5 })
 
         expect(response.status).toBe(400)
     })
 
     it("recusa comprovante que não foi enviado", async () => {
-        const {token} = await createUser()
+        const { token } = await createUser()
 
-        const response = await createRefund(token, {filename: "aaaaaaaaaaaaaaaaaaaa-nao-existe.jpg"})
+        const response = await createRefund(token, { filename: "aaaaaaaaaaaaaaaaaaaa-nao-existe.jpg" })
 
         expect(response.status).toBe(400)
     })
 
     it("recusa comprovante já usado em outro pedido", async () => {
-        const {token} = await createUser()
+        const { token } = await createUser()
         const filename = await uploadReceipt(token)
-        await createRefund(token, {filename})
+        await createRefund(token, { filename })
 
-        const response = await createRefund(token, {filename})
+        const response = await createRefund(token, { filename })
 
         expect(response.status).toBe(400)
     })
@@ -61,7 +61,7 @@ describe("GET /refunds e /refunds/me", () => {
     it("gestor vê todos, filtra por status e não recebe senhas", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
         await createRefund(employee.token)
         await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${manager.token}`)
 
@@ -90,7 +90,7 @@ describe("GET /refunds/:id", () => {
     it("funcionário não vê pedido de outra pessoa", async () => {
         const maria = await createUser()
         const joao = await createUser()
-        const {body: refund} = await createRefund(maria.token)
+        const { body: refund } = await createRefund(maria.token)
 
         const asOwner = await api().get(`/refunds/${refund.id}`).set("Authorization", `Bearer ${maria.token}`)
         const asOther = await api().get(`/refunds/${refund.id}`).set("Authorization", `Bearer ${joao.token}`)
@@ -100,7 +100,7 @@ describe("GET /refunds/:id", () => {
     })
 
     it("responde 404 para id inexistente", async () => {
-        const {token} = await createUser("manager")
+        const { token } = await createUser("manager")
 
         const response = await api().get(`/refunds/${MISSING_ID}`).set("Authorization", `Bearer ${token}`)
 
@@ -112,25 +112,25 @@ describe("aprovar e recusar", () => {
     it("gestor recusa com motivo e fica registrado quem analisou", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
 
         const response = await api()
             .patch(`/refunds/${refund.id}/reject`)
             .set("Authorization", `Bearer ${manager.token}`)
-            .send({reason: "Comprovante ilegível"})
+            .send({ reason: "Comprovante ilegível" })
 
         expect(response.status).toBe(200)
         expect(response.body).toMatchObject({
             status: "rejected",
             rejectionReason: "Comprovante ilegível",
-            reviewedBy: {id: manager.user.id},
+            reviewedBy: { id: manager.user.id },
         })
     })
 
     it("exige motivo para recusar", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
 
         const response = await api()
             .patch(`/refunds/${refund.id}/reject`)
@@ -143,28 +143,30 @@ describe("aprovar e recusar", () => {
     it("não deixa analisar o mesmo pedido duas vezes", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
         await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${manager.token}`)
 
         const response = await api()
             .patch(`/refunds/${refund.id}/reject`)
             .set("Authorization", `Bearer ${manager.token}`)
-            .send({reason: "Mudei de ideia"})
+            .send({ reason: "Mudei de ideia" })
 
         expect(response.status).toBe(409)
     })
 
     it("funcionário não pode aprovar", async () => {
         const employee = await createUser()
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
 
-        const response = await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${employee.token}`)
+        const response = await api()
+            .patch(`/refunds/${refund.id}/approve`)
+            .set("Authorization", `Bearer ${employee.token}`)
 
         expect(response.status).toBe(403)
     })
 
     it("responde 404 para id inexistente", async () => {
-        const {token} = await createUser("manager")
+        const { token } = await createUser("manager")
 
         const response = await api().patch(`/refunds/${MISSING_ID}/approve`).set("Authorization", `Bearer ${token}`)
 
@@ -174,22 +176,32 @@ describe("aprovar e recusar", () => {
 
 describe("PATCH /refunds/:id (editar)", () => {
     it("dono corrige um pedido pendente", async () => {
-        const {token} = await createUser()
-        const {body: refund} = await createRefund(token)
+        const { token } = await createUser()
+        const { body: refund } = await createRefund(token)
 
-        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`)
-            .send({name: "Jantar com cliente", amountInCents: 9990, category: "others"})
+        const response = await api()
+            .patch(`/refunds/${refund.id}`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ name: "Jantar com cliente", amountInCents: 9990, category: "others" })
 
         expect(response.status).toBe(200)
-        expect(response.body).toMatchObject({name: "Jantar com cliente", amountInCents: 9990, category: "others", status: "pending"})
+        expect(response.body).toMatchObject({
+            name: "Jantar com cliente",
+            amountInCents: 9990,
+            category: "others",
+            status: "pending",
+        })
     })
 
     it("trocar o comprovante apaga o antigo", async () => {
-        const {token} = await createUser()
-        const {body: refund} = await createRefund(token)
+        const { token } = await createUser()
+        const { body: refund } = await createRefund(token)
         const newFile = await uploadReceipt(token)
 
-        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`).send({filename: newFile})
+        const response = await api()
+            .patch(`/refunds/${refund.id}`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ filename: newFile })
 
         expect(response.body.filename).toBe(newFile)
         expect(await storage.exists(refund.filename)).toBe(false)
@@ -197,11 +209,14 @@ describe("PATCH /refunds/:id (editar)", () => {
     })
 
     it("não usa comprovante de outro pedido", async () => {
-        const {token} = await createUser()
-        const {body: first} = await createRefund(token)
-        const {body: second} = await createRefund(token)
+        const { token } = await createUser()
+        const { body: first } = await createRefund(token)
+        const { body: second } = await createRefund(token)
 
-        const response = await api().patch(`/refunds/${second.id}`).set("Authorization", `Bearer ${token}`).send({filename: first.filename})
+        const response = await api()
+            .patch(`/refunds/${second.id}`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ filename: first.filename })
 
         expect(response.status).toBe(400)
     })
@@ -209,21 +224,27 @@ describe("PATCH /refunds/:id (editar)", () => {
     it("não edita pedido já analisado", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
         await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${manager.token}`)
 
-        const response = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${employee.token}`).send({amountInCents: 1})
+        const response = await api()
+            .patch(`/refunds/${refund.id}`)
+            .set("Authorization", `Bearer ${employee.token}`)
+            .send({ amountInCents: 1 })
 
         expect(response.status).toBe(409)
-        expect((await prisma.refunds.findUnique({where: {id: refund.id}}))?.amountInCents).toBe(3550)
+        expect((await prisma.refunds.findUnique({ where: { id: refund.id } }))?.amountInCents).toBe(3550)
     })
 
     it("outra pessoa não edita; corpo vazio é recusado", async () => {
         const maria = await createUser()
         const joao = await createUser()
-        const {body: refund} = await createRefund(maria.token)
+        const { body: refund } = await createRefund(maria.token)
 
-        const other = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${joao.token}`).send({name: "Hack"})
+        const other = await api()
+            .patch(`/refunds/${refund.id}`)
+            .set("Authorization", `Bearer ${joao.token}`)
+            .send({ name: "Hack" })
         const empty = await api().patch(`/refunds/${refund.id}`).set("Authorization", `Bearer ${maria.token}`).send({})
 
         expect(other.status).toBe(404)
@@ -233,8 +254,8 @@ describe("PATCH /refunds/:id (editar)", () => {
 
 describe("DELETE /refunds/:id", () => {
     it("funcionário cancela o próprio pedido pendente e o comprovante é apagado", async () => {
-        const {token} = await createUser()
-        const {body: refund} = await createRefund(token)
+        const { token } = await createUser()
+        const { body: refund } = await createRefund(token)
 
         const response = await api().delete(`/refunds/${refund.id}`).set("Authorization", `Bearer ${token}`)
 
@@ -245,7 +266,7 @@ describe("DELETE /refunds/:id", () => {
     it("não cancela pedido já analisado", async () => {
         const employee = await createUser()
         const manager = await createUser("manager")
-        const {body: refund} = await createRefund(employee.token)
+        const { body: refund } = await createRefund(employee.token)
         await api().patch(`/refunds/${refund.id}/approve`).set("Authorization", `Bearer ${manager.token}`)
 
         const response = await api().delete(`/refunds/${refund.id}`).set("Authorization", `Bearer ${employee.token}`)
@@ -256,7 +277,7 @@ describe("DELETE /refunds/:id", () => {
     it("não cancela pedido de outra pessoa", async () => {
         const maria = await createUser()
         const joao = await createUser()
-        const {body: refund} = await createRefund(maria.token)
+        const { body: refund } = await createRefund(maria.token)
 
         const response = await api().delete(`/refunds/${refund.id}`).set("Authorization", `Bearer ${joao.token}`)
 

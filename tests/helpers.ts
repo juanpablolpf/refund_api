@@ -20,7 +20,7 @@ export async function resetDatabase() {
 }
 
 export function createOrganization(name: string) {
-    return prisma.organization.create({data: {name}})
+    return prisma.organization.create({ data: { name } })
 }
 
 let userCount = 0
@@ -32,21 +32,18 @@ export async function createUser(role: UserRole = "employee", organizationId = d
     const password = "123456"
 
     const user = await prisma.user.create({
-        data: {name: `${role} ${userCount}`, email, password: await hash(password, 4), role, organizationId},
+        data: { name: `${role} ${userCount}`, email, password: await hash(password, 4), role, organizationId },
     })
 
-    const response = await api().post("/sessions").send({email, password})
+    const response = await api().post("/sessions").send({ email, password })
 
-    return {user, token: response.body.token as string}
+    return { user, token: response.body.token as string }
 }
 
 export async function createInvite(managerToken: string, role: UserRole = "employee") {
-    const response = await api()
-        .post("/invites")
-        .set("Authorization", `Bearer ${managerToken}`)
-        .send({role})
+    const response = await api().post("/invites").set("Authorization", `Bearer ${managerToken}`).send({ role })
 
-    return response.body as {id: string; token: string; role: UserRole}
+    return response.body as { id: string; token: string; role: UserRole }
 }
 
 // Começos de arquivo que a API reconhece como JPG, PNG e PDF
@@ -60,7 +57,7 @@ export function upload(token: string, content = FILES.jpg, filename = "comprovan
     return api()
         .post("/uploads")
         .set("Authorization", `Bearer ${token}`)
-        .attach("file", content, {filename, contentType})
+        .attach("file", content, { filename, contentType })
 }
 
 export async function uploadReceipt(token: string) {
@@ -74,5 +71,5 @@ export async function createRefund(token: string, data: Record<string, unknown> 
     return api()
         .post("/refunds")
         .set("Authorization", `Bearer ${token}`)
-        .send({name: "Almoço", category: "food", amountInCents: 3550, filename, ...data})
+        .send({ name: "Almoço", category: "food", amountInCents: 3550, filename, ...data })
 }

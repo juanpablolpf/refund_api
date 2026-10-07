@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
-import {z} from "zod"
-import { Prisma } from "@prisma/client";
-import {prisma} from "@/database/prisma"
-import { AppError } from "@/utils/AppError";
-import { storage } from "@/providers/storage";
-import { authUser } from "@/utils/auth-user";
+import { Request, Response } from "express"
+import { z } from "zod"
+import { Prisma } from "@prisma/client"
+import { prisma } from "@/database/prisma"
+import { AppError } from "@/utils/AppError"
+import { storage } from "@/providers/storage"
+import { authUser } from "@/utils/auth-user"
 import uploadConfig from "@/configs/upload"
 import { categorySchema, statusSchema } from "@/utils/refund-schemas"
 import { userPublicSelect } from "@/utils/user-schemas"
@@ -27,10 +27,10 @@ async function paginate(where: Prisma.RefundsWhereInput, page: number, perPage: 
             skip: (page - 1) * perPage,
             take: perPage,
             where,
-            orderBy: {createdAt: "desc"},
-            include: {user: userPublicFields},
+            orderBy: { createdAt: "desc" },
+            include: { user: userPublicFields },
         }),
-        prisma.refunds.count({where}),
+        prisma.refunds.count({ where }),
     ])
 
     const totalPages = Math.ceil(totalRecords / perPage)
@@ -50,16 +50,19 @@ async function paginate(where: Prisma.RefundsWhereInput, page: number, perPage: 
 // no próprio update evita que dois gestores analisem o mesmo pedido ao mesmo tempo.
 async function review(
     id: string,
-    reviewer: {id: string; organizationId: string},
+    reviewer: { id: string; organizationId: string },
     data: Prisma.RefundsUpdateManyMutationInput,
 ) {
-    const {count} = await prisma.refunds.updateMany({
-        where: {id, organizationId: reviewer.organizationId, status: "pending"},
-        data: {...data, reviewedById: reviewer.id, reviewedAt: new Date()},
+    const { count } = await prisma.refunds.updateMany({
+        where: { id, organizationId: reviewer.organizationId, status: "pending" },
+        data: { ...data, reviewedById: reviewer.id, reviewedAt: new Date() },
     })
 
     if (count === 0) {
-        const exists = await prisma.refunds.findFirst({where: {id, organizationId: reviewer.organizationId}, select: {id: true}})
+        const exists = await prisma.refunds.findFirst({
+            where: { id, organizationId: reviewer.organizationId },
+            select: { id: true },
+        })
 
         if (!exists) {
             throw new AppError("Solicitação não encontrada", 404)
@@ -69,19 +72,19 @@ async function review(
     }
 
     return prisma.refunds.findUnique({
-        where: {id},
-        include: {user: userPublicFields, reviewedBy: userPublicFields},
+        where: { id },
+        include: { user: userPublicFields, reviewedBy: userPublicFields },
     })
 }
 
 const refundBodySchema = z.object({
-    name: z.string().trim().min(1, {message: "Informe o nome da solicitação"}),
+    name: z.string().trim().min(1, { message: "Informe o nome da solicitação" }),
     category: categorySchema,
     amountInCents: z
         .number()
-        .int({message: "Informe o valor em centavos (ex.: R$ 35,50 = 3550)"})
-        .positive({message: "O valor precisa ser positivo"}),
-    filename: z.string().regex(uploadConfig.RECEIPT_FILENAME, {message: "Arquivo inválido"}),
+        .int({ message: "Informe o valor em centavos (ex.: R$ 35,50 = 3550)" })
+        .positive({ message: "O valor precisa ser positivo" }),
+    filename: z.string().regex(uploadConfig.RECEIPT_FILENAME, { message: "Arquivo inválido" }),
 })
 
 // O comprovante precisa ter sido enviado por /uploads e não pode estar em outro pedido
@@ -90,7 +93,7 @@ async function ensureReceiptAvailable(filename: string) {
         throw new AppError("Comprovante não encontrado. Envie o arquivo antes de salvar a solicitação")
     }
 
-    const fileInUse = await prisma.refunds.findFirst({where: {filename}, select: {id: true}})
+    const fileInUse = await prisma.refunds.findFirst({ where: { filename }, select: { id: true } })
 
     if (fileInUse) {
         throw new AppError("Esse comprovante já está em outra solicitação")
@@ -99,7 +102,7 @@ async function ensureReceiptAvailable(filename: string) {
 
 class RefundsController {
     async create(request: Request, response: Response) {
-        const {name, category, amountInCents, filename} = refundBodySchema.parse(request.body)
+        const { name, category, amountInCents, filename } = refundBodySchema.parse(request.body)
 
         const user = authUser(request)
 
@@ -125,12 +128,16 @@ class RefundsController {
             name: z.string().trim().optional().default(""),
         })
 
-        const {name, status, page, perPage} = querySchema.parse(request.query)
+        const { name, status, page, perPage } = querySchema.parse(request.query)
 
         const result = await paginate(
-            {organizationId: authUser(request).organizationId, user: {name: {contains: name, mode: "insensitive"}}, status},
+            {
+                organizationId: authUser(request).organizationId,
+                user: { name: { contains: name, mode: "insensitive" } },
+                status,
+            },
             page,
-            perPage
+            perPage,
         )
 
         response.json(result)
@@ -138,21 +145,21 @@ class RefundsController {
 
     // Funcionário: só os próprios pedidos
     async mine(request: Request, response: Response) {
-        const {status, page, perPage} = paginationSchema.parse(request.query)
+        const { status, page, perPage } = paginationSchema.parse(request.query)
 
-        const result = await paginate({userId: authUser(request).id, status}, page, perPage)
+        const result = await paginate({ userId: authUser(request).id, status }, page, perPage)
 
         response.json(result)
     }
 
     async show(request: Request, response: Response) {
-        const {id} = paramsSchema.parse(request.params)
+        const { id } = paramsSchema.parse(request.params)
         const user = authUser(request)
 
         // Pedido de outra empresa não existe para quem pergunta
         const refund = await prisma.refunds.findFirst({
-            where: {id, organizationId: user.organizationId},
-            include: {user: userPublicFields, reviewedBy: userPublicFields},
+            where: { id, organizationId: user.organizationId },
+            include: { user: userPublicFields, reviewedBy: userPublicFields },
         })
 
         // Funcionário só enxerga os próprios pedidos. Responde 404 (e não 403)
@@ -168,7 +175,7 @@ class RefundsController {
     }
 
     async approve(request: Request, response: Response) {
-        const {id} = paramsSchema.parse(request.params)
+        const { id } = paramsSchema.parse(request.params)
 
         const refund = await review(id, authUser(request), {
             status: "approved",
@@ -182,27 +189,29 @@ class RefundsController {
     async approveMany(request: Request, response: Response) {
         const user = authUser(request)
 
-        const {ids} = z.object({
-            ids: z.array(z.string().uuid()).min(1, {message: "Selecione pelo menos uma solicitação"}).max(50),
-        }).parse(request.body)
+        const { ids } = z
+            .object({
+                ids: z.array(z.string().uuid()).min(1, { message: "Selecione pelo menos uma solicitação" }).max(50),
+            })
+            .parse(request.body)
 
-        const {count} = await prisma.refunds.updateMany({
-            where: {id: {in: ids}, organizationId: user.organizationId, status: "pending"},
-            data: {status: "approved", rejectionReason: null, reviewedById: user.id, reviewedAt: new Date()},
+        const { count } = await prisma.refunds.updateMany({
+            where: { id: { in: ids }, organizationId: user.organizationId, status: "pending" },
+            data: { status: "approved", rejectionReason: null, reviewedById: user.id, reviewedAt: new Date() },
         })
 
         // Os que não entraram já tinham sido analisados (ou não são desta empresa)
-        response.json({approved: count, skipped: new Set(ids).size - count})
+        response.json({ approved: count, skipped: new Set(ids).size - count })
     }
 
     async reject(request: Request, response: Response) {
-        const {id} = paramsSchema.parse(request.params)
+        const { id } = paramsSchema.parse(request.params)
 
         const bodySchema = z.object({
-            reason: z.string().trim().min(3, {message: "Informe o motivo da recusa"}),
+            reason: z.string().trim().min(3, { message: "Informe o motivo da recusa" }),
         })
 
-        const {reason} = bodySchema.parse(request.body)
+        const { reason } = bodySchema.parse(request.body)
 
         const refund = await review(id, authUser(request), {
             status: "rejected",
@@ -214,13 +223,16 @@ class RefundsController {
 
     // Funcionário corrige um pedido próprio que ainda não foi analisado
     async update(request: Request, response: Response) {
-        const {id} = paramsSchema.parse(request.params)
+        const { id } = paramsSchema.parse(request.params)
 
-        const changes = refundBodySchema.partial()
-            .refine((body) => Object.values(body).some((value) => value !== undefined), {message: "Nada para alterar"})
+        const changes = refundBodySchema
+            .partial()
+            .refine((body) => Object.values(body).some((value) => value !== undefined), {
+                message: "Nada para alterar",
+            })
             .parse(request.body)
 
-        const refund = await prisma.refunds.findUnique({where: {id}})
+        const refund = await prisma.refunds.findUnique({ where: { id } })
 
         if (!refund || refund.userId !== authUser(request).id) {
             throw new AppError("Solicitação não encontrada", 404)
@@ -233,8 +245,8 @@ class RefundsController {
         }
 
         // Só altera se continuar pendente (evita editar algo que o gestor acabou de analisar)
-        const {count} = await prisma.refunds.updateMany({
-            where: {id, status: "pending"},
+        const { count } = await prisma.refunds.updateMany({
+            where: { id, status: "pending" },
             data: changes,
         })
 
@@ -247,8 +259,8 @@ class RefundsController {
         }
 
         const updated = await prisma.refunds.findUnique({
-            where: {id},
-            include: {user: userPublicFields, reviewedBy: userPublicFields},
+            where: { id },
+            include: { user: userPublicFields, reviewedBy: userPublicFields },
         })
 
         response.json(updated)
@@ -256,9 +268,9 @@ class RefundsController {
 
     // Funcionário cancela um pedido próprio que ainda não foi analisado
     async remove(request: Request, response: Response) {
-        const {id} = paramsSchema.parse(request.params)
+        const { id } = paramsSchema.parse(request.params)
 
-        const refund = await prisma.refunds.findUnique({where: {id}})
+        const refund = await prisma.refunds.findUnique({ where: { id } })
 
         if (!refund || refund.userId !== authUser(request).id) {
             throw new AppError("Solicitação não encontrada", 404)
@@ -268,11 +280,11 @@ class RefundsController {
             throw new AppError("Só é possível cancelar solicitações pendentes", 409)
         }
 
-        await prisma.refunds.delete({where: {id}})
+        await prisma.refunds.delete({ where: { id } })
         await storage.delete(refund.filename)
 
         response.status(204).send()
     }
 }
 
-export {RefundsController}
+export { RefundsController }

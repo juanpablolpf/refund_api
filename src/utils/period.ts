@@ -3,7 +3,11 @@
 const OFFSET_HOURS = 3
 
 function currentYearMonth(now: Date) {
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).formatToParts(now)
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+    }).formatToParts(now)
     const year = Number(parts.find((p) => p.type === "year")!.value)
     const month = Number(parts.find((p) => p.type === "month")!.value)
     return { year, month }
@@ -17,7 +21,12 @@ export function monthRange(offset = 0, now = new Date()) {
     return { start, end }
 }
 
-const dateFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric" })
+const dateFormat = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+})
 
 export function formatDateBR(date: Date) {
     return dateFormat.format(date)

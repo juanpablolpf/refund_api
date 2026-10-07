@@ -28,7 +28,10 @@ async function main() {
 
     const password = await askPassword(`Nova senha de ${email}`)
 
-    await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(password), sessionVersion: { increment: 1 } } })
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { password: await hashPassword(password), sessionVersion: { increment: 1 } },
+    })
     console.log(`Senha de ${email} alterada.`)
 }
 

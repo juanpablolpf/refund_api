@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
-import {prisma} from "@/database/prisma"
-import {z} from "zod"
+import { prisma } from "@/database/prisma"
+import { z } from "zod"
 import { AppError } from "@/utils/AppError"
 import { authUser } from "@/utils/auth-user"
 import { activeInviteWhere, INVALID_INVITE } from "@/controllers/invites-controller"
@@ -12,12 +12,12 @@ class UsersController {
     // Para criar uma empresa nova, o caminho é POST /organizations.
     async create(request: Request, response: Response) {
         const bodySchema = personSchema.extend({
-            inviteToken: z.string({required_error: "O cadastro é feito pelo link de convite da sua empresa"}).min(10),
+            inviteToken: z.string({ required_error: "O cadastro é feito pelo link de convite da sua empresa" }).min(10),
         })
 
-        const {name, email, password, inviteToken} = bodySchema.parse(request.body)
+        const { name, email, password, inviteToken } = bodySchema.parse(request.body)
 
-        const invite = await prisma.invite.findFirst({where: {token: inviteToken, ...activeInviteWhere()}})
+        const invite = await prisma.invite.findFirst({ where: { token: inviteToken, ...activeInviteWhere() } })
 
         if (!invite) {
             throw new AppError(INVALID_INVITE)
@@ -35,7 +35,7 @@ class UsersController {
                     organizationId: invite.organizationId,
                 },
             }),
-            prisma.invite.update({where: {id: invite.id}, data: {usesCount: {increment: 1}}}),
+            prisma.invite.update({ where: { id: invite.id }, data: { usesCount: { increment: 1 } } }),
         ])
 
         response.status(201).json()
@@ -43,11 +43,11 @@ class UsersController {
 
     // Gestor: equipe da própria empresa
     async index(request: Request, response: Response) {
-        const {organizationId} = authUser(request)
+        const { organizationId } = authUser(request)
 
         const users = await prisma.user.findMany({
-            where: {organizationId},
-            orderBy: [{role: "desc"}, {name: "asc"}],
+            where: { organizationId },
+            orderBy: [{ role: "desc" }, { name: "asc" }],
             select: userPublicSelect,
         })
 
@@ -55,4 +55,4 @@ class UsersController {
     }
 }
 
-export {UsersController}
+export { UsersController }

@@ -11,16 +11,16 @@ export const INVALID_INVITE = "Convite inválido ou vencido. Peça um novo link 
 
 // Convite válido: não foi revogado e ainda não venceu
 export function activeInviteWhere() {
-    return {revokedAt: null, expiresAt: {gt: new Date()}}
+    return { revokedAt: null, expiresAt: { gt: new Date() } }
 }
 
-const inviteSelect = {id: true, token: true, role: true, usesCount: true, expiresAt: true, createdAt: true}
+const inviteSelect = { id: true, token: true, role: true, usesCount: true, expiresAt: true, createdAt: true }
 
 class InvitesController {
     async create(request: Request, response: Response) {
         const user = authUser(request)
 
-        const {role} = z.object({role: z.enum(["employee", "manager"]).default("employee")}).parse(request.body)
+        const { role } = z.object({ role: z.enum(["employee", "manager"]).default("employee") }).parse(request.body)
 
         const invite = await prisma.invite.create({
             data: {
@@ -38,11 +38,11 @@ class InvitesController {
 
     // Links ainda válidos da empresa, do mais novo para o mais antigo
     async index(request: Request, response: Response) {
-        const {organizationId} = authUser(request)
+        const { organizationId } = authUser(request)
 
         const invites = await prisma.invite.findMany({
-            where: {organizationId, ...activeInviteWhere()},
-            orderBy: {createdAt: "desc"},
+            where: { organizationId, ...activeInviteWhere() },
+            orderBy: { createdAt: "desc" },
             select: inviteSelect,
         })
 
@@ -51,27 +51,27 @@ class InvitesController {
 
     // Público: a tela de cadastro por convite mostra o nome da empresa antes de a pessoa se cadastrar
     async show(request: Request, response: Response) {
-        const {token} = z.object({token: z.string().min(10)}).parse(request.params)
+        const { token } = z.object({ token: z.string().min(10) }).parse(request.params)
 
         const invite = await prisma.invite.findFirst({
-            where: {token, ...activeInviteWhere()},
-            select: {role: true, expiresAt: true, organization: {select: {name: true}}},
+            where: { token, ...activeInviteWhere() },
+            select: { role: true, expiresAt: true, organization: { select: { name: true } } },
         })
 
         if (!invite) {
             throw new AppError(INVALID_INVITE, 404)
         }
 
-        response.json({organizationName: invite.organization.name, role: invite.role, expiresAt: invite.expiresAt})
+        response.json({ organizationName: invite.organization.name, role: invite.role, expiresAt: invite.expiresAt })
     }
 
     async revoke(request: Request, response: Response) {
-        const {organizationId} = authUser(request)
-        const {id} = z.object({id: z.string().uuid()}).parse(request.params)
+        const { organizationId } = authUser(request)
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
 
-        const {count} = await prisma.invite.updateMany({
-            where: {id, organizationId, revokedAt: null},
-            data: {revokedAt: new Date()},
+        const { count } = await prisma.invite.updateMany({
+            where: { id, organizationId, revokedAt: null },
+            data: { revokedAt: new Date() },
         })
 
         if (count === 0) {
@@ -82,4 +82,4 @@ class InvitesController {
     }
 }
 
-export {InvitesController}
+export { InvitesController }

@@ -18,7 +18,8 @@
     "create-manager:prod": "tsx --env-file=.env.production src/scripts/create-manager.ts",
     "reset-password": "tsx --env-file=.env src/scripts/reset-password.ts",
     "reset-password:prod": "tsx --env-file=.env.production src/scripts/reset-password.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "format": "prettier --write src tests"
   },
   "author": "Juan Pablo",
   "license": "ISC",
@@ -41,6 +42,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^1.4.12",
     "@types/supertest": "^7.2.1",
+    "prettier": "^3.9.9",
     "prisma": "^6.2.1",
     "supertest": "^7.3.0",
     "ts-node": "^10.9.2",

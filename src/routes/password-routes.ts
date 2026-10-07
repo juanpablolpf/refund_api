@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { PasswordResetController } from "@/controllers/password-reset-controller";
+import { Router } from "express"
+import { PasswordResetController } from "@/controllers/password-reset-controller"
 
 const passwordResetController = new PasswordResetController()
 
@@ -8,4 +8,4 @@ const passwordRoutes = Router()
 passwordRoutes.post("/forgot", passwordResetController.forgot)
 passwordRoutes.post("/reset", passwordResetController.reset)
 
-export {passwordRoutes}
+export { passwordRoutes }

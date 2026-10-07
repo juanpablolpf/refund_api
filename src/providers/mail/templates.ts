@@ -1,6 +1,9 @@
 // Escapa texto vindo do usuário antes de pôr no HTML do e-mail
 function escapeHtml(text: string) {
-    return text.replace(/[&<>"']/g, (char) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[char]!)
+    return text.replace(
+        /[&<>"']/g,
+        (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!,
+    )
 }
 
 export function passwordResetMail(name: string, link: string) {
@@ -26,5 +29,5 @@ export function passwordResetMail(name: string, link: string) {
   <p style="font-size: 14px; color: #4F6B61">Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
 </div>`
 
-    return {subject: "Criar senha nova no RefundPay", text, html}
+    return { subject: "Criar senha nova no RefundPay", text, html }
 }

@@ -16,7 +16,6 @@ import { env } from "@/env"
 import { contentTypeFor } from "@/utils/file-type"
 import { StorageProvider } from "./storage-provider"
 
-
 // Guarda os comprovantes num bucket compatível com S3 (Supabase Storage, Cloudflare R2, AWS S3...)
 export class S3Storage implements StorageProvider {
     private bucket = env.S3_BUCKET!
@@ -36,20 +35,22 @@ export class S3Storage implements StorageProvider {
         const contentType = contentTypeFor(filename)
 
         try {
-            await this.client.send(new PutObjectCommand({
-                Bucket: this.bucket,
-                Key: filename,
-                Body: await fs.promises.readFile(tmpPath),
-                ContentType: contentType,
-            }))
+            await this.client.send(
+                new PutObjectCommand({
+                    Bucket: this.bucket,
+                    Key: filename,
+                    Body: await fs.promises.readFile(tmpPath),
+                    ContentType: contentType,
+                }),
+            )
         } finally {
-            await fs.promises.rm(tmpPath, {force: true})
+            await fs.promises.rm(tmpPath, { force: true })
         }
     }
 
     async exists(filename: string) {
         try {
-            await this.client.send(new HeadObjectCommand({Bucket: this.bucket, Key: filename}))
+            await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: filename }))
             return true
         } catch (error) {
             if (error instanceof NotFound || error instanceof NoSuchKey) return false
@@ -58,18 +59,18 @@ export class S3Storage implements StorageProvider {
     }
 
     async delete(filename: string) {
-        await this.client.send(new DeleteObjectCommand({Bucket: this.bucket, Key: filename}))
+        await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: filename }))
     }
 
     async send(filename: string, response: Response) {
         try {
-            const object = await this.client.send(new GetObjectCommand({Bucket: this.bucket, Key: filename}))
+            const object = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: filename }))
 
             response.setHeader("Content-Type", object.ContentType ?? "application/octet-stream")
             ;(object.Body as Readable).pipe(response)
         } catch (error) {
             if (error instanceof NoSuchKey) {
-                response.status(404).json({message: "Arquivo não encontrado"})
+                response.status(404).json({ message: "Arquivo não encontrado" })
                 return
             }
             throw error

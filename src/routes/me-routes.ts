@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { MeController } from "@/controllers/me-controller";
+import { Router } from "express"
+import { MeController } from "@/controllers/me-controller"
 
 const meController = new MeController()
 
@@ -9,4 +9,4 @@ meRoutes.get("/", meController.show)
 meRoutes.patch("/", meController.update)
 meRoutes.patch("/password", meController.changePassword)
 
-export {meRoutes}
+export { meRoutes }

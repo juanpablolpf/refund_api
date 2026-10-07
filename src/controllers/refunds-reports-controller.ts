@@ -48,12 +48,27 @@ class RefundsReportsController {
         const thisMonth = { reviewedAt: { gte: start, lt: end } }
 
         const [pending, approved, rejected] = await Promise.all([
-            prisma.refunds.aggregate({ where: { organizationId, status: "pending" }, _count: true, _sum: { amountInCents: true } }),
-            prisma.refunds.aggregate({ where: { organizationId, status: "approved", ...thisMonth }, _count: true, _sum: { amountInCents: true } }),
-            prisma.refunds.aggregate({ where: { organizationId, status: "rejected", ...thisMonth }, _count: true, _sum: { amountInCents: true } }),
+            prisma.refunds.aggregate({
+                where: { organizationId, status: "pending" },
+                _count: true,
+                _sum: { amountInCents: true },
+            }),
+            prisma.refunds.aggregate({
+                where: { organizationId, status: "approved", ...thisMonth },
+                _count: true,
+                _sum: { amountInCents: true },
+            }),
+            prisma.refunds.aggregate({
+                where: { organizationId, status: "rejected", ...thisMonth },
+                _count: true,
+                _sum: { amountInCents: true },
+            }),
         ])
 
-        const totals = (result: typeof pending) => ({ count: result._count, amountInCents: result._sum.amountInCents ?? 0 })
+        const totals = (result: typeof pending) => ({
+            count: result._count,
+            amountInCents: result._sum.amountInCents ?? 0,
+        })
 
         response.json({
             pending: totals(pending),
@@ -82,7 +97,18 @@ class RefundsReportsController {
             include: { user: { select: { name: true, email: true } }, reviewedBy: { select: { name: true } } },
         })
 
-        const header = ["Data do pedido", "Funcionário", "E-mail", "Descrição", "Categoria", "Valor (R$)", "Situação", "Analisado por", "Data da análise", "Motivo da recusa"]
+        const header = [
+            "Data do pedido",
+            "Funcionário",
+            "E-mail",
+            "Descrição",
+            "Categoria",
+            "Valor (R$)",
+            "Situação",
+            "Analisado por",
+            "Data da análise",
+            "Motivo da recusa",
+        ]
         const rows = refunds.map((refund) => [
             formatDateBR(refund.createdAt),
             refund.user.name,

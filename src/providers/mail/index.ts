@@ -32,7 +32,13 @@ class ResendMail implements MailProvider {
                 Authorization: `Bearer ${env.RESEND_API_KEY}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({from: env.MAIL_FROM, to: [mail.to], subject: mail.subject, text: mail.text, html: mail.html}),
+            body: JSON.stringify({
+                from: env.MAIL_FROM,
+                to: [mail.to],
+                subject: mail.subject,
+                text: mail.text,
+                html: mail.html,
+            }),
         })
 
         if (!response.ok) {

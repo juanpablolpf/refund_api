@@ -1,6 +1,6 @@
-import { Router } from "express";
-import { UsersController } from "@/controllers/users-controller";
-import { verifyUserAuthorization } from "@/middlewares/verify-user-authorization";
+import { Router } from "express"
+import { UsersController } from "@/controllers/users-controller"
+import { verifyUserAuthorization } from "@/middlewares/verify-user-authorization"
 
 const usersController = new UsersController()
 
@@ -11,4 +11,4 @@ publicUsersRoutes.post("/", usersController.create)
 const usersRoutes = Router()
 usersRoutes.get("/", verifyUserAuthorization(["manager"]), usersController.index)
 
-export{usersRoutes, publicUsersRoutes}
+export { usersRoutes, publicUsersRoutes }

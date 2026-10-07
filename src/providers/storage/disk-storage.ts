@@ -12,7 +12,7 @@ export class DiskStorage implements StorageProvider {
     }
 
     async save(filename: string) {
-        await fs.promises.mkdir(uploadConfig.UPLOADS_FOLDER, {recursive: true})
+        await fs.promises.mkdir(uploadConfig.UPLOADS_FOLDER, { recursive: true })
         await fs.promises.rename(path.resolve(uploadConfig.TMP_FOLDER, filename), this.filePath(filename))
     }
 
@@ -26,15 +26,15 @@ export class DiskStorage implements StorageProvider {
     }
 
     async delete(filename: string) {
-        await fs.promises.rm(this.filePath(filename), {force: true})
+        await fs.promises.rm(this.filePath(filename), { force: true })
     }
 
     async send(filename: string, response: Response) {
         if (!(await this.exists(filename))) {
-            response.status(404).json({message: "Arquivo não encontrado"})
+            response.status(404).json({ message: "Arquivo não encontrado" })
             return
         }
 
-        response.sendFile(this.filePath(filename), {headers: {"Content-Type": contentTypeFor(filename)}})
+        response.sendFile(this.filePath(filename), { headers: { "Content-Type": contentTypeFor(filename) } })
     }
 }

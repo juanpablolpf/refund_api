@@ -13,7 +13,7 @@ const LINK_MINUTES = 60
 // Evita encher a caixa de alguém: no máximo um e-mail por minuto para a mesma conta
 const RESEND_AFTER_SECONDS = 60
 
-const LINK_EXPIRED = "Este link não vale mais. Peça um novo em \"Esqueci minha senha\"."
+const LINK_EXPIRED = 'Este link não vale mais. Peça um novo em "Esqueci minha senha".'
 
 const appUrl = env.APP_URL ?? env.CORS_ORIGIN ?? "http://localhost:5180"
 
@@ -24,14 +24,14 @@ function hashToken(token: string) {
 class PasswordResetController {
     // Sempre responde igual, exista ou não a conta: assim ninguém descobre quais e-mails estão cadastrados
     async forgot(request: Request, response: Response) {
-        const {email} = personSchema.pick({email: true}).parse(request.body)
+        const { email } = personSchema.pick({ email: true }).parse(request.body)
 
-        const user = await prisma.user.findUnique({where: {email}, select: {id: true, name: true, email: true}})
+        const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, email: true } })
 
         if (user) {
             const recent = await prisma.passwordResetToken.findFirst({
-                where: {userId: user.id, createdAt: {gt: new Date(Date.now() - RESEND_AFTER_SECONDS * 1000)}},
-                select: {id: true},
+                where: { userId: user.id, createdAt: { gt: new Date(Date.now() - RESEND_AFTER_SECONDS * 1000) } },
+                select: { id: true },
             })
 
             if (!recent) {
@@ -39,7 +39,7 @@ class PasswordResetController {
 
                 // Um link novo invalida os anteriores
                 await prisma.$transaction([
-                    prisma.passwordResetToken.deleteMany({where: {userId: user.id, usedAt: null}}),
+                    prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } }),
                     prisma.passwordResetToken.create({
                         data: {
                             tokenHash: hashToken(token),
@@ -50,7 +50,7 @@ class PasswordResetController {
                 ])
 
                 const message = passwordResetMail(user.name, `${appUrl}/redefinir-senha/${token}`)
-                await mail.send({to: user.email, ...message})
+                await mail.send({ to: user.email, ...message })
             }
         }
 
@@ -58,21 +58,23 @@ class PasswordResetController {
     }
 
     async reset(request: Request, response: Response) {
-        const {token, password} = z.object({
-            token: z.string().min(20, {message: "Link inválido"}),
-            password: personSchema.shape.password,
-        }).parse(request.body)
+        const { token, password } = z
+            .object({
+                token: z.string().min(20, { message: "Link inválido" }),
+                password: personSchema.shape.password,
+            })
+            .parse(request.body)
 
-        const resetToken = await prisma.passwordResetToken.findUnique({where: {tokenHash: hashToken(token)}})
+        const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) } })
 
         if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
             throw new AppError(LINK_EXPIRED)
         }
 
         // Marca como usado só se ninguém usou antes (dois cliques ao mesmo tempo)
-        const {count} = await prisma.passwordResetToken.updateMany({
-            where: {id: resetToken.id, usedAt: null},
-            data: {usedAt: new Date()},
+        const { count } = await prisma.passwordResetToken.updateMany({
+            where: { id: resetToken.id, usedAt: null },
+            data: { usedAt: new Date() },
         })
 
         if (count === 0) {
@@ -81,12 +83,12 @@ class PasswordResetController {
 
         // Senha nova e todos os logins antigos desconectados
         await prisma.user.update({
-            where: {id: resetToken.userId},
-            data: {password: await hashPassword(password), sessionVersion: {increment: 1}},
+            where: { id: resetToken.userId },
+            data: { password: await hashPassword(password), sessionVersion: { increment: 1 } },
         })
 
         response.status(204).send()
     }
 }
 
-export {PasswordResetController}
+export { PasswordResetController }

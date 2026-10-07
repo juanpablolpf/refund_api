@@ -1,13 +1,13 @@
-import { Router } from "express";
-import { sessionsRoutes } from "./sessions-routes";
-import { refundsRoutes } from "./refunds-routes";
-import { ensureAuthenticated } from "@/middlewares/ensure-authenticated";
-import { uploadsRoutes } from "./uploads-routes";
-import { organizationsRoutes, publicOrganizationsRoutes } from "./organizations-routes";
-import { invitesRoutes, publicInvitesRoutes } from "./invites-routes";
-import { publicUsersRoutes, usersRoutes } from "./users-routes";
-import { meRoutes } from "./me-routes";
-import { passwordRoutes } from "./password-routes";
+import { Router } from "express"
+import { sessionsRoutes } from "./sessions-routes"
+import { refundsRoutes } from "./refunds-routes"
+import { ensureAuthenticated } from "@/middlewares/ensure-authenticated"
+import { uploadsRoutes } from "./uploads-routes"
+import { organizationsRoutes, publicOrganizationsRoutes } from "./organizations-routes"
+import { invitesRoutes, publicInvitesRoutes } from "./invites-routes"
+import { publicUsersRoutes, usersRoutes } from "./users-routes"
+import { meRoutes } from "./me-routes"
+import { passwordRoutes } from "./password-routes"
 
 const routes = Router()
 
@@ -27,4 +27,4 @@ routes.use("/invites", invitesRoutes)
 routes.use("/users", usersRoutes)
 routes.use("/me", meRoutes)
 
-export {routes}
+export { routes }
