@@ -53,13 +53,14 @@ npm run dev                   # http://localhost:3333
 | `npm run dev` | Servidor em modo desenvolvimento (reinicia ao salvar) |
 | `npm test` | Roda os testes automatizados (usam o schema `test` do Postgres, apagado no final) |
 | `npm run typecheck` | Confere os tipos do TypeScript |
+| `npm run format` | Formata o código com o Prettier |
 | `npm run build` | Gera a versão de produção em `build/` |
 | `npm start` | Roda a versão de produção (as variáveis precisam estar no ambiente) |
 | `npm run db:up` | Sobe o Postgres de desenvolvimento no Docker |
 | `npm run db:migrate` | Aplica as migrações no banco do `DATABASE_URL` |
 | `npm run create-manager -- "Nome" email "Empresa"` | Cria uma empresa com esse gestor, ou promove uma conta existente |
 | `npm run create-manager:prod -- "Nome" email "Empresa"` | O mesmo, no banco de produção (lê o `.env.production`) |
-| `npm run reset-password -- email` | Troca a senha de um usuário (a senha nova é pedida sem aparecer na tela) |
+| `npm run reset-password -- email` | Troca a senha de um usuário e encerra os logins abertos dele (a senha nova é pedida sem aparecer na tela) |
 | `npm run reset-password:prod -- email` | O mesmo, no banco de produção |
 
 ## Usuários e permissões
